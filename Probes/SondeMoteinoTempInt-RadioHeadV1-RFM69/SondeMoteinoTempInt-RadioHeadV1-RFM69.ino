@@ -12,26 +12,54 @@
 // Tested on Teensy 3.1 with RF69 on PJRC breakout board
 
 #include <SPI.h>
-#include <RH_RF69.h>
+#include <RFM69.h> //get it here: https://www.github.com/lowpowerlab/rfm69
+#include <SPIFlash.h>  //get it here: https://www.github.com/lowpowerlab/spiflash
 #include <OneWire.h> // Inclusion de la librairie OneWire
+#include <EEPROM.h>
+//#include <avr/wdt.h>
+#include <WirelessHEX69.h> //get it here: https://github.com/LowPowerLab/WirelessProgramming/tree/master/WirelessHEX69
  
 #define DS18B20 0x28     // Adresse 1-Wire du DS18B20
 #define BROCHE_ONEWIRE 3 // Broche utilisée pour le bus 1-Wire
 
 #define DEBUG 1
 #define DISTRIBUTED_DEBUG     0
-#define NODEID "002"
-#define NETWORKID "100"
-#define GATEWAY "001"
-#define ID "003"
-#define VERSION "001"
+#define VERSION 001
 #define SERIAL_BAUD   9600
-int TRANSMITPERIOD = 30000; //transmit a packet to gateway so often (in ms)
- long lastPeriod = 0;
-  #define LED           9 // Moteinos have LEDs on D9
+#define FREQUENCY   RF69_433MHZ
+#define ACK_TIME    30  // # of ms to wait for an ack
+//#define ENCRYPTKEY "sampleEncryptKey" //(16 bytes of your choice - keep the same on all encrypted nodes)
+#ifdef __AVR_ATmega1284P__
+  #define FLASH_SS      23 // and FLASH SS on D23
+#else
+  #define FLASH_SS      8 // and FLASH SS on D8
+#endif
+#define LED           9 // Moteinos have LEDs on D9
 
+// ADDRID is the address of the ID in the EEPROM, SETPEEROM is a boolean to setup the ID in the EEPROM, IDTOSETUP is the ID to put in the EEPROM and ID is the actual ID read from the EEPROM. Same schema for others
+//#define SETUPEEPROM 0
+#define ADDRID 0
+#define IDTOSETUP 002
+#define ADDRNODEID 10
+#define NODEIDTOSETUP 002
+#define ADDRNETWORKID 20
+#define NETWORKIDTOSETUP 100
+#define ADDRGATEWAYID 30
+#define GATEWAYIDTOSETUP 001
+
+long ID = 2;
+long NODEID = 2;
+long NETWORKID = 100;
+long GATEWAYID = 001;
+
+long TRANSMITPERIOD = 2000; //transmit a packet to gateway so often (in ms)
+long lastPeriod = 0;
+RFM69 radio;
+char input = 0;
+
+SPIFlash flash(FLASH_SS, 0xEF30); //EF30 for windbond 4mbit flash
 // Singleton instance of the radio driver
-RH_RF69 rf69;
+
 //RH_RF69 rf69(15, 16); // For RF69 on PJRC breakout board with Teensy 3.1
 
 OneWire ds(BROCHE_ONEWIRE); // Création de l'objet OneWire ds
@@ -39,7 +67,7 @@ OneWire ds(BROCHE_ONEWIRE); // Création de l'objet OneWire ds
 // Fonction récupérant la température depuis le DS18B20
 // Retourne true si tout va bien, ou false en cas d'erreur
 boolean getTemperature(float *temp){
-  byte data[9], addr[8];
+byte data[9], addr[8];
   // data : Données lues depuis le scratchpad
   // addr : adresse du module 1-Wire détecté
  
@@ -82,30 +110,48 @@ char *ftoa(char *a, double f, int precision)
  long heiltal = (long)f;
  itoa(heiltal, a, 10);
  while (*a != '\0') a++;
- *a++ = '.';
- long desimal = abs((long)((f - heiltal) * p[precision]));
- itoa(desimal, a, 10);
+ Serial.print("integer str=");
+ Serial.print(ret);
+ Serial.print(" long=");
+ Serial.print(heiltal);
+ Serial.println();
+ if(precision>0) {
+  *a++ = '.';
+  long desimal = abs((long)((f - heiltal) * p[precision]));
+  itoa(desimal, a, 10);
+ }
+ Serial.print("ftoa(");
+ Serial.print(f);
+ Serial.print(")=");
+ Serial.print(ret);
+ Serial.println();
  return ret;
 }
 
 void setup() 
 {
-  Serial.begin(9600);
-  if (!rf69.init())
-    Serial.println("init failed");
-  // Defaults after init are 434.0MHz, modulation GFSK_Rb250Fd250, +13dbM
-  // No encryption
-  if (!rf69.setFrequency(433.0))
-    Serial.println("setFrequency failed");
-
-  // If you are using a high power RF69, you *must* set a Tx power in the
-  // range 14 to 20 like this:
-  // rf69.setTxPower(14);
+  Serial.begin(SERIAL_BAUD);
 
   // The encryption key has to be the same as the one in the server
   uint8_t key[] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
                     0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
-  rf69.setEncryptionKey(key);
+  
+  Serial.println("init");
+  //delay(10000);
+
+  // Wireless programming setup
+  pinMode(LED, OUTPUT);
+  radio.initialize(FREQUENCY,NODEID,NETWORKID);
+  //radio.encrypt(ENCRYPTKEY); //OPTIONAL
+  #ifdef IS_RFM69HW
+    radio.setHighPower(); //only for RFM69HW!
+  #endif
+  Serial.print("Start node...");
+
+  if (flash.initialize())
+    Serial.println("SPI Flash Init OK!");
+  else
+    Serial.println("SPI Flash Init FAIL!");
 }
 
 void parseMessage(char *Message, char * Response, int value) {
@@ -143,27 +189,25 @@ void Blink(byte PIN, int DELAY_MS)
 // [SousReseau,To,From,Type,Version,...]
 // [NETWORKID;GATEWAY;NODEID;TYPE;VERSION...]
 
-void loop()
-{
-    char temp1[20];
-  uint8_t buf[RH_RF69_MAX_MESSAGE_LEN];
-  uint8_t len = sizeof(buf);
+void sendTemp(){
+  char temp1[20];
   
   
+  int currPeriod = millis()/TRANSMITPERIOD;
+  if (currPeriod != lastPeriod)
+  {
+    lastPeriod=currPeriod;
+  if (DEBUG==1) Serial.println("Loop");
   
   float temp;
   char MessageServeur[100];
   int   sendSize = 0;
   char buf2[20];
-
-
-  // Test avec une valeur de temp arbitraire :
-  //temp = 1000.0;
-  // Lit la température ambiante à ~1Hz
   
- //if(getTemperature(&temp)) {
- temp = random(-10,30);
-     if (DEBUG == 2) {
+      // Lit la température ambiante à ~1Hz
+      //if(getTemperature(&temp)) {
+     temp = -10;
+     if (DEBUG ==1 ) {
       // Affiche la température
       Serial.print("Temperature : ");
       Serial.print(temp);
@@ -172,16 +216,20 @@ void loop()
       Serial.println();
      }
   //}
-  int currPeriod = millis()/TRANSMITPERIOD;
-  if (currPeriod != lastPeriod)
-  {
-    lastPeriod=currPeriod;
+  //delay(500);
 
 
-    
+
+  Serial.println("Data Serveur:");  
   memset(MessageServeur,'\0',100);
-  sprintf(MessageServeur,"%s;%s;%s;%s;%s;%s;",NETWORKID,GATEWAY,NODEID,ID,VERSION,ftoa(buf2,temp,2));
+  ftoa(buf2,temp,0);
+  Serial.print("message is");
+  Serial.print(buf2);
+  Serial.println();
+  sprintf(MessageServeur,"%i;%i;%i;%i;%i;",NETWORKID,GATEWAYID,NODEID,ID,VERSION);
+  strcat(MessageServeur, buf2);
   sendSize = strlen(MessageServeur);
+  Serial.println(MessageServeur);
     
     if (DEBUG==1) {
       Serial.println();
@@ -201,17 +249,18 @@ void loop()
     data[i]=MessageServeur[i];
 
      Blink(LED,3);
- 
-  rf69.send(data, sendSize);
+
+  radio.sendWithRetry(GATEWAYID, data, sendSize);
+  //rf69.send(data, sendSize);
   
-  rf69.waitPacketSent();
+  //rf69.waitPacketSent();
   // Now wait for a reply
 
 
-  if (rf69.waitAvailableTimeout(5000))
+  if (radio.ACKReceived(GATEWAYID)) // ACKREQUESTED ?
   { 
     // Should be a reply message for us now   
-    if (rf69.recv(buf, &len))
+/*    if (rf69.recv(buf, &len))
     {
      if (DEBUG==1) {
         Serial.print("got reply: ");
@@ -220,11 +269,11 @@ void loop()
       memset(temp1,'\0',20);
       parseMessage((char*)buf,temp1,0);
       Serial.println(temp1);
-      if (strncmp((char*)temp1,NETWORKID,3)==0) {
+      if (strncmp((char*)temp1,(char*)NETWORKID,3)==0) {
         memset(temp1,'\0',20);
         parseMessage((char*)buf,temp1,1);  
         Serial.println(temp1);
-        if (strncmp((char*)temp1,NODEID,3)==0) {
+        if (strncmp((char*)temp1,(char*)NODEID,3)==0) {
             memset(temp1,'\0',20);
             parseMessage((char*)buf,temp1,3); 
             Serial.println(temp1);
@@ -232,7 +281,8 @@ void loop()
               Serial.println("--> ACK");
             }
         }
-      }
+      }*/
+      radio.sendACK();
         
       
     }
@@ -243,9 +293,54 @@ void loop()
   }
   else
   {
-    Serial.println("No reply, is rf69_server running?");
+    //Serial.println("No reply, is rf69_server running?");
   }
   delay(400);
 }
+
+
+
+void loop()
+{
+  // Setup of the ID
+  #ifdef SETUPEEPROM
+    EEPROM.write(ADDRID, IDTOSETUP);
+    EEPROM.write(ADDRNODEID, NODEIDTOSETUP);
+    EEPROM.write(ADDRNETWORKID, NETWORKIDTOSETUP);
+    EEPROM.write(ADDRGATEWAYID, GATEWAYIDTOSETUP);
+    ID = EEPROM.read(ADDRID);
+    NODEID = EEPROM.read(ADDRNODEID);
+    NETWORKID = EEPROM.read(ADDRNETWORKID);
+    GATEWAYID = EEPROM.read(ADDRGATEWAYID);
+  #else
+    ID = EEPROM.read(ADDRID);
+    NODEID = EEPROM.read(ADDRNODEID);
+    NETWORKID = EEPROM.read(ADDRNETWORKID);
+    GATEWAYID = EEPROM.read(ADDRGATEWAYID);
+  #endif
+  
+  // Check for existing RF data, potentially for a new sketch wireless upload
+  // For this to work this check has to be done often enough to be
+  // picked up when a GATEWAY is trying hard to reach this node for a new sketch wireless upload
+  
+  if (radio.receiveDone())
+  {
+    Serial.print("Got [");
+    Serial.print(radio.SENDERID);
+    Serial.print(':');
+    Serial.print(radio.DATALEN);
+    Serial.print("] > ");
+    for (byte i = 0; i < radio.DATALEN; i++)
+      Serial.print((char)radio.DATA[i], HEX);
+    Serial.println();
+    CheckForWirelessHEX(radio, flash, true);
+    Serial.println();
+  } else {
+  
+  ////////////////////////////////////////////////////////////////////////////////////////////
+  // Normal sketch code here
+   sendTemp();
+  ////////////////////////////////////////////////////////////////////////////////////////////
+  }
 }
 
