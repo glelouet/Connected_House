@@ -1,1 +1,5 @@
 .pioenvs
+lib/*_id*
+.settings
+.project
+.cproject
