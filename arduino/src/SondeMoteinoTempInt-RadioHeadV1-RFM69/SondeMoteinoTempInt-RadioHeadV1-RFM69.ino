@@ -18,7 +18,9 @@
 #include <EEPROM.h>
 //#include <avr/wdt.h>
 #include <WirelessHEX69.h> //get it here: https://github.com/LowPowerLab/WirelessProgramming/tree/master/WirelessHEX69
- 
+
+#include <monteino_tools.h>
+
 #define DS18B20 0x28     // Adresse 1-Wire du DS18B20
 #define BROCHE_ONEWIRE 3 // Broche utilisée pour le bus 1-Wire
 
@@ -102,32 +104,6 @@ byte data[9], addr[8];
   return true;
 }
 
-char *ftoa(char *a, double f, int precision)
-{
- long p[] = {0,10,100,1000,10000,100000,1000000,10000000,100000000};
- 
- char *ret = a;
- long heiltal = (long)f;
- itoa(heiltal, a, 10);
- while (*a != '\0') a++;
- Serial.print("integer str=");
- Serial.print(ret);
- Serial.print(" long=");
- Serial.print(heiltal);
- Serial.println();
- if(precision>0) {
-  *a++ = '.';
-  long desimal = abs((long)((f - heiltal) * p[precision]));
-  itoa(desimal, a, 10);
- }
- Serial.print("ftoa(");
- Serial.print(f);
- Serial.print(")=");
- Serial.print(ret);
- Serial.println();
- return ret;
-}
-
 void setup() 
 {
   Serial.begin(SERIAL_BAUD);
@@ -176,14 +152,6 @@ void parseMessage(char *Message, char * Response, int value) {
     i++;
      
   }
-}
-
-void Blink(byte PIN, int DELAY_MS)
-{
-  pinMode(PIN, OUTPUT);
-  digitalWrite(PIN,HIGH);
-  delay(DELAY_MS);
-  digitalWrite(PIN,LOW);
 }
 
 // [SousReseau,To,From,Type,Version,...]
