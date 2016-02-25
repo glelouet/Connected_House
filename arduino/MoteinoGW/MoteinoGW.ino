@@ -16,7 +16,9 @@
 
 #include <EEPROM.h>
 #include <Ethernet.h>
-//#include <utility/W5100.h>
+#include <utility/w5100.h>
+
+#include <Moteino.h>
 
 // Singleton instance of the radio driver
 
@@ -121,14 +123,6 @@ void setup()
 
    startEthernet();
 
-}
-
-void Blink(byte PIN, int DELAY_MS)
-{
-  pinMode(PIN, OUTPUT);
-  digitalWrite(PIN,HIGH);
-  delay(DELAY_MS);
-  digitalWrite(PIN,LOW);
 }
 
 
@@ -307,7 +301,7 @@ void updateThingSpeak(char* tsData, char *chanel)
   
   //if (ENABLE_IDLE_STBY_RF==1)  
   noInterrupts();
-  radio.setMode(RF69_MODE_SLEEP);
+  radio.sleep();
 
   // Connecting to the server
   byte server[] = { 193, 54, 76, 34 }; // kgb.emn.fr
@@ -353,7 +347,7 @@ void updateThingSpeak(char* tsData, char *chanel)
 
   Blink(LED,500);
 
-  radio.setMode(RF69_MODE_STANDBY);
+//  radio.setMode(RF69_MODE_STANDBY);
    
   interrupts();
 
