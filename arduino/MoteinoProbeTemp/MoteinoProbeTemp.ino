@@ -46,7 +46,7 @@
 #define ADDRGATEWAYID 30
 #define GATEWAYIDTOSETUP 001
 
-uint16_t ID = 2;
+uint32_t ID = 2;
 uint16_t NODEID = 2;
 long NETWORKID = 100;
 long GATEWAYID = 001;
@@ -130,8 +130,19 @@ void setup()
 
   if (flash.initialize())
   {
-  	ID = flash.readDeviceId();
-  	Serial.print("id=");
+  	uint8_t* uniq_id = flash.readUniqueId();
+  	Serial.print("flah id : ");
+  	for (byte i=0;i<8;i++)
+    {
+      Serial.print(uniq_id[i], HEX);
+      Serial.print(' ');
+    }
+    ID=0;
+  	for (byte i=4;i<8;i++)
+    {
+    	ID=ID<<8|uniq_id[i];
+    }
+  	Serial.print("deduced id=");
   	Serial.println(ID);
     Serial.println("SPI Flash Init OK.");
   }
@@ -214,7 +225,7 @@ void sendTemp(){
   Serial.println();
   Serial.print("id=");
   Serial.println(ID);
-  sprintf(MessageServeur,"%ld;%ld;%u;%u;%u;",NETWORKID,GATEWAYID,NODEID,ID,VERSION);
+  sprintf(MessageServeur,"%ld;%ld;%u;%lu;%u;",NETWORKID,GATEWAYID,NODEID,ID,VERSION);
   strcat(MessageServeur, buf2);
   sendSize = strlen(MessageServeur);
   Serial.println(MessageServeur);
