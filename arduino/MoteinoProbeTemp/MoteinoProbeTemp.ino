@@ -37,10 +37,8 @@
 #endif
 #define LED           9 // Moteinos have LEDs on D9
 
-// ADDRID is the address of the ID in the EEPROM, SETPEEROM is a boolean to setup the ID in the EEPROM, IDTOSETUP is the ID to put in the EEPROM and ID is the actual ID read from the EEPROM. Same schema for others
-//#define SETUPEEPROM 0
-#define ADDRID 0
-#define IDTOSETUP 002
+// ADDRID is the address of the ID in the EEPROM, SETUPEEPROM is a boolean to setup the ID in the EEPROM, IDTOSETUP is the ID to put in the EEPROM and ID is the actual ID read from the EEPROM. Same schema for others
+#define SETUPEEPROM 1
 #define ADDRNODEID 10
 #define NODEIDTOSETUP 002
 #define ADDRNETWORKID 20
@@ -48,8 +46,8 @@
 #define ADDRGATEWAYID 30
 #define GATEWAYIDTOSETUP 001
 
-long ID = 2;
-long NODEID = 2;
+uint16_t ID = 2;
+uint16_t NODEID = 2;
 long NETWORKID = 100;
 long GATEWAYID = 001;
 
@@ -106,6 +104,22 @@ byte data[9], addr[8];
 void setup() 
 {
   Serial.begin(SERIAL_BAUD);
+    
+  // Setup of the ID
+  #ifdef SETUPEEPROM
+  	Serial.println("setting EEPROM");
+    EEPROM.write(ADDRNODEID, NODEIDTOSETUP);
+    EEPROM.write(ADDRNETWORKID, NETWORKIDTOSETUP);
+    EEPROM.write(ADDRGATEWAYID, GATEWAYIDTOSETUP);
+    NODEID = EEPROM.read(ADDRNODEID);
+    NETWORKID = EEPROM.read(ADDRNETWORKID);
+    GATEWAYID = EEPROM.read(ADDRGATEWAYID);
+  #else
+  	Serial.println("loading EEPROM");
+    NODEID = EEPROM.read(ADDRNODEID);
+    NETWORKID = EEPROM.read(ADDRNETWORKID);
+    GATEWAYID = EEPROM.read(ADDRGATEWAYID);
+  #endif
 
   // The encryption key has to be the same as the one in the server
   uint8_t key[] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
@@ -113,6 +127,16 @@ void setup()
   
   Serial.println("init");
   //delay(10000);
+
+  if (flash.initialize())
+  {
+  	ID = flash.readDeviceId();
+  	Serial.print("id=");
+  	Serial.println(ID);
+    Serial.println("SPI Flash Init OK.");
+  }
+  else
+    Serial.println("SPI Flash Init FAIL!");
 
   // Wireless programming setup
   pinMode(LED, OUTPUT);
@@ -122,11 +146,6 @@ void setup()
     radio.setHighPower(); //only for RFM69HW!
   #endif
   Serial.print("Start node...");
-
-  if (flash.initialize())
-    Serial.println("SPI Flash Init OK!");
-  else
-    Serial.println("SPI Flash Init FAIL!");
 }
 
 void parseMessage(char *Message, char * Response, int value) {
@@ -193,7 +212,9 @@ void sendTemp(){
   Serial.print("message is");
   Serial.print(buf2);
   Serial.println();
-  sprintf(MessageServeur,"%i;%i;%i;%i;%i;",NETWORKID,GATEWAYID,NODEID,ID,VERSION);
+  Serial.print("id=");
+  Serial.println(ID);
+  sprintf(MessageServeur,"%ld;%ld;%u;%u;%u;",NETWORKID,GATEWAYID,NODEID,ID,VERSION);
   strcat(MessageServeur, buf2);
   sendSize = strlen(MessageServeur);
   Serial.println(MessageServeur);
@@ -269,23 +290,6 @@ void sendTemp(){
 
 void loop()
 {
-  // Setup of the ID
-  #ifdef SETUPEEPROM
-    EEPROM.write(ADDRID, IDTOSETUP);
-    EEPROM.write(ADDRNODEID, NODEIDTOSETUP);
-    EEPROM.write(ADDRNETWORKID, NETWORKIDTOSETUP);
-    EEPROM.write(ADDRGATEWAYID, GATEWAYIDTOSETUP);
-    ID = EEPROM.read(ADDRID);
-    NODEID = EEPROM.read(ADDRNODEID);
-    NETWORKID = EEPROM.read(ADDRNETWORKID);
-    GATEWAYID = EEPROM.read(ADDRGATEWAYID);
-  #else
-    ID = EEPROM.read(ADDRID);
-    NODEID = EEPROM.read(ADDRNODEID);
-    NETWORKID = EEPROM.read(ADDRNETWORKID);
-    GATEWAYID = EEPROM.read(ADDRGATEWAYID);
-  #endif
-  
   // Check for existing RF data, potentially for a new sketch wireless upload
   // For this to work this check has to be done often enough to be
   // picked up when a GATEWAY is trying hard to reach this node for a new sketch wireless upload
