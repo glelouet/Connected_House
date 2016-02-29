@@ -9,7 +9,7 @@
 #define ARDUINO_LIB_Moteino_Moteino_H_
 
 #include <Arduino.h>
-#include <RFM69.h> //get it here: https://www.github.com/lowpowerlab/rfm69
+#include <RFM69_ATC.h> //get it here: https://www.github.com/lowpowerlab/rfm69
 #include <SPIFlash.h>  //get it here: https://www.github.com/lowpowerlab/spiflash
 #include <OneWire.h> // Inclusion de la librairie OneWire
 #include <EEPROM.h> //#include <avr/wdt.h>
@@ -30,12 +30,25 @@ class Moteino {
 
 Moteino();
 ~Moteino();
-void setup();//call children setup() or initialize() or whatsoever
+void setup();
+//call children setup() or initialize() or whatsoever
+
+//////////////////////////////////////////////////////////////////
+// serial port
+/////////////////////////////////////////////////////////////////
 
 //serial speed
 int SERIAL_BAUD = 9600;
 
-byte LED_PIN = 13;
+#define SERIAL_BUFFER_SIZE 100
+// data retrieved from buffer are stored here
+char serial_buffer[SERIAL_BUFFER_SIZE+2];
+int serial_blength=0;
+//retrieve orders from serial
+void check_serial();
+void handleSerialMessage(char *message);
+
+byte LED_PIN = 9;
 
 //////////////////////////////////////////////////////////
 // storing in EEPROM
@@ -54,7 +67,7 @@ struct StoreStruct {
 	byte nodeId, gwId;
 	// network number, 0-255 . hardware filtering prevents trame from
 	// another network number from reaching this device
-	long netWord;
+	byte netWord;
 	//do we need to encrypt the network ?
 	boolean encrypt;
 	//crypt key if encrypt is true
@@ -80,7 +93,9 @@ void writeEEPROM();
 // start the EEPROM management (load data, store data if needed)
 void init_EEPROM();
 // set to true to store data in EEPROM post setup()
-boolean store_EEPROM = false;
+boolean rewrite_EEPROM = false;
+// write params to the serial
+void printParams();
 
 //////////////////////////////////////////////////////////
 
@@ -97,19 +112,30 @@ byte DS18B20_PIN = 0x28;
 // RF69 (wireless radio) chip
 //////////////////////////////////////////////////////////
 
+//default gateway address
+byte gw_RF69=0;
 // wireless radio
-RFM69 radio;
+RFM69_ATC radio;
 // unique ID of flash chip
 uint32_t flashId = 1;
 boolean acquire_RF69_infos=true;
 //init radio
 void init_RF69();
 
-// send data to the RF69 gateway if exists
-void sendRF69(byte targetId, char *data);
+// send data to a RF69 station if exists
+void sendRF69(char *data, byte targetId);
 
 // send data to the broadcast on same network WORD
 void sendBCRF69(char *data);
+
+// set pairing mode on, answering netword=gw_addr to broadcast on net word
+void pairOn();
+
+//deactivate pairing mod
+void pairOff();
+
+//check if data istransmitted through RF69
+void check_RF69();
 
 //////////////////////////////////////////////////////////
 

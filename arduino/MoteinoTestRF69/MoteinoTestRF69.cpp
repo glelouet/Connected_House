@@ -7,7 +7,6 @@ Moteino moteino;
 
 void setup()
 {
-  moteino.acquire_from_EEPROM = false;
   moteino.acquire_RF69_infos = false;
 	moteino.setup();
   Serial.println("setup!");
@@ -15,4 +14,5 @@ void setup()
 
 void loop(){
   moteino.loop();
+  moteino.sendBCRF69("test");
 }

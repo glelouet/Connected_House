@@ -37,16 +37,77 @@ void Moteino::setup(){
   init_flash();
   init_ethernet();
   init_RF69();
-  if(store_EEPROM) writeEEPROM();
+  if(rewrite_EEPROM) writeEEPROM();
+}
+
+void Moteino::check_serial(){
+  while(Serial.available()>0) {
+    char cread = Serial.read();
+    serial_buffer[serial_blength++]=cread;
+    if(cread=='\n' || cread=='\r'){
+      Serial.println();
+      serial_buffer[serial_blength-1]='\0';
+      if(serial_blength>1) handleSerialMessage(serial_buffer);
+      serial_blength=0;
+    } else if(cread==127 || cread==8){//backspace or del
+      serial_blength-=2;
+      if(serial_blength<0) serial_blength=0;
+    } else {
+      Serial.print(cread);
+    }
+    if(serial_blength>=SERIAL_BUFFER_SIZE) {
+      serial_buffer[SERIAL_BUFFER_SIZE-1]='\0';
+      Serial.println("error : serial buffer overflow, discarding serial buffer :");
+      Serial.println(serial_buffer);
+      serial_blength=0;
+    }
+  }
+}
+
+void Moteino::printParams(){
+  Serial.print("version=");Serial.println(params.version);
+  Serial.print("netStored=");Serial.println(params.netStored);
+  Serial.print("nodeId=");Serial.println(params.nodeId);
+  Serial.print("gwId=");Serial.println(params.gwId);
+  Serial.print("netWord=");Serial.println(params.netWord);
+  Serial.print("encrypt=");Serial.println(params.encrypt);
+}
+
+void Moteino::handleSerialMessage(char *message) {
+  if(strncmp(message, "netword=", strlen("netword="))==0) {
+    int netword = atoi(message+strlen("netword="));
+    Serial.print("setting net word to ");
+    Serial.println(netword);
+    params.netWord=netword;
+    radio.setNetwork(netword);
+  } else if(strcmp(message, "write")==0) {
+    writeEEPROM();
+    Serial.println("writing params to EEPROM");
+  } else if(strcmp(message, "load")==0) {
+    loadEEPROM();
+    Serial.println("loaded params from EEPROM :");
+    printParams();
+  } else if(strcmp(message, "params")==0) {
+    printParams();
+  }else if(strcmp(message, "pairon")==0) {
+    pairOn();
+  } else if(strcmp(message, "pairoff")==0) {
+    pairOff();
+  } else if(strncmp(message, "blink ", strlen("blink "))==0) {
+    int time = atoi(message+strlen("blink "));
+    blink(time);
+  } else {
+    Serial.print("discarding ");
+    Serial.println(message);
+  }
 }
 
 void Moteino::init_EEPROM(){
-  if(!loadEEPROM())
+  if(acquire_from_EEPROM && !loadEEPROM())
   writeEEPROM();
 }
 
 boolean Moteino::loadEEPROM(){
-  if(acquire_from_EEPROM) {
     if(DEBUG) Serial.println("acquiring parameters from EEPROM");
     // To make sure there are settings, and they are YOURS!
     // If nothing is found it will use the default settings.
@@ -59,7 +120,6 @@ boolean Moteino::loadEEPROM(){
       if(DEBUG) Serial.println("incorrect version in EEPROM");
       return false;
     }
-  }
   return true;
 }
 
@@ -67,7 +127,7 @@ boolean Moteino::loadEEPROM(){
 
 void Moteino::writeEEPROM() {
   for (unsigned int t=0; t<sizeof(params); t++)
-    EEPROM.write(EEPROM_offset + t, *((char*)&params + t));
+    EEPROM.update(EEPROM_offset + t, *((char*)&params + t));
 }
 
 void Moteino::init_flash(){
@@ -129,19 +189,60 @@ void Moteino::init_ethernet(){
   }
 }
 
+///////////////////////////////////////////////////////////
+// RF69
+///////////////////////////////////////////////////////////
+
 void Moteino::init_RF69(){
-  if(hasEthernet) params.nodeId= 0;
+  if(hasEthernet) params.nodeId=gw_RF69;
   radio.initialize(RF69_433MHZ,params.nodeId,params.netWord);
   //radio.encrypt(ENCRYPTKEY); //OPTIONAL
   #ifdef IS_RFM69HW //only for RFM69HW
     radio.setHighPower();!
   #endif
+  radio.enableAutoPower(-60);
   if(acquire_RF69_infos) {
 
   } else {
     // the info are already retrieved from the EEPROM
   }
 }
+
+void Moteino::pairOn(){
+
+}
+
+void Moteino::pairOff(){
+
+}
+
+void Moteino::sendRF69(char *trame, byte targetId){
+  int sendSize = strlen(trame);
+  // Send a message to rf69_server
+  uint8_t data[100];
+  for (int i=0;i<100;i++)
+    data[i]=trame[i];
+  blink(3);
+  radio.sendWithRetry(targetId, data, sendSize);
+}
+
+void Moteino::sendBCRF69(char *data){
+  radio.send(RF69_BROADCAST_ADDR, data, strlen(data));
+}
+
+void Moteino::check_RF69(){
+  if (radio.receiveDone()) {
+    if(strcmp("test", (char *)radio.DATA)==0) {
+      Serial.println("received test on RF69");
+    }else
+    // check if radio received rom to write on the flash, then flash it
+    CheckForWirelessHEX(radio, flash, true);
+  }
+}
+
+/////////////////////////////////////////////////
+// DS18B20
+/////////////////////////////////////////////////
 
 // Fonction récupérant la température depuis le DS18B20
 // Retourne true si tout va bien, ou false en cas d'erreur
@@ -181,25 +282,7 @@ boolean Moteino::getTemperatureDS18B20(float *temp){
   return true;
 }
 
-void Moteino::sendRF69(byte targetId, char *trame){
-  int sendSize = strlen(trame);
-  // Send a message to rf69_server
-  uint8_t data[100];
-  for (int i=0;i<100;i++)
-    data[i]=trame[i];
-  blink(3);
-  radio.sendWithRetry(targetId, data, sendSize);
-}
-
-void Moteino::sendBCRF69(char *data){
-  radio.send(RF69_BROADCAST_ADDR, data, strlen(data));
-}
-
 void Moteino::loop() {
-
-  if (radio.receiveDone())
-  {
-    // check if radio received rom to write on the flash, then flash it
-    CheckForWirelessHEX(radio, flash, true);
-  }
+  check_serial();
+  check_RF69();
 }
