@@ -8,68 +8,140 @@
 #include <Moteino.h>
 #include <Arduino.h>
 
-void Moteino::blink(byte PIN, int DELAY_MS)
+void Moteino::blink(int DELAY_MS)
 {
-  pinMode(PIN, OUTPUT);
-  digitalWrite(PIN,HIGH);
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN,HIGH);
   delay(DELAY_MS);
-  digitalWrite(PIN,LOW);
+  digitalWrite(LED_PIN,LOW);
 }
 
 Moteino::Moteino():
-	flash(FLASH_PIN, 0xEF30),//0xEF30 for windbond 4mbit flash
-	owire(ONEWIRE_PIN){
+  owire(ONEWIRE_PIN),
+	flash(FLASH_PIN, 0xEF30)//0xEF30 for windbond 4mbit flash
+{
 }
 
 Moteino::~Moteino(){
 }
 
 void Moteino::setup(){
- Serial.begin(SERIAL_BAUD);
-  // Setup of the ID
-  #ifdef SETUPEEPROM
-  	Serial.println("setting EEPROM");
-    EEPROM.write(ADDRNODEID, NODEIDTOSETUP);
-    EEPROM.write(ADDRNETWORKID, NETWORKIDTOSETUP);
-    EEPROM.write(ADDRGATEWAYID, GATEWAYIDTOSETUP);
-    NODEID = EEPROM.read(ADDRNODEID);
-    NETWORKID = EEPROM.read(ADDRNETWORKID);
-    GATEWAYID = EEPROM.read(ADDRGATEWAYID);
-  #else
-  	Serial.println("loading EEPROM");
-    NODEID = EEPROM.read(ADDRNODEID);
-    NETWORKID = EEPROM.read(ADDRNETWORKID);
-    GATEWAYID = EEPROM.read(ADDRGATEWAYID);
-  #endif
+  Serial.begin(SERIAL_BAUD);
+  init_EEPROM();
   pinMode(LED_PIN, OUTPUT);
 
-  if (flash.initialize()) {
-  	uint8_t* uniq_id = flash.readUniqueId();
-//  	Serial.print("flah id : ");
-//  	for (byte i=0;i<8;i++)
-//    {
-//      Serial.print(uniq_id[i], HEX);
-//      Serial.print(' ');
-//    }
-    ID=0;
-  	for (byte i=4;i<8;i++) {
-    	ID=ID<<8|uniq_id[i];
+  // this order is important :
+  // flash gives us its unique id so we can translate it to a *mac* address for the RF69
+  // if ethernet is present then we are a gateway, so our IP on the RF69 network is 0
+  // we then initialize the RF69 using those parameters
+  init_flash();
+  init_ethernet();
+  init_RF69();
+  if(store_EEPROM) writeEEPROM();
+}
+
+void Moteino::init_EEPROM(){
+  if(!loadEEPROM())
+  writeEEPROM();
+}
+
+boolean Moteino::loadEEPROM(){
+  if(acquire_from_EEPROM) {
+    if(DEBUG) Serial.println("acquiring parameters from EEPROM");
+    // To make sure there are settings, and they are YOURS!
+    // If nothing is found it will use the default settings.
+    if (EEPROM.read(EEPROM_offset + 0) == VERSION[0]
+      && EEPROM.read(EEPROM_offset + 1) == VERSION[1]
+      && EEPROM.read(EEPROM_offset + 2) == VERSION[2]){
+        for (unsigned int t=0; t<sizeof(params); t++)
+          *((char*)&params + t) = EEPROM.read(EEPROM_offset + t);
+    } else {
+      if(DEBUG) Serial.println("incorrect version in EEPROM");
+      return false;
     }
-  	Serial.print("device id=");
-  	Serial.println(ID);
-//    Serial.println("SPI Flash Init OK.");
+  }
+  return true;
+}
+
+
+
+void Moteino::writeEEPROM() {
+  for (unsigned int t=0; t<sizeof(params); t++)
+    EEPROM.write(EEPROM_offset + t, *((char*)&params + t));
+}
+
+void Moteino::init_flash(){
+  if (flash.initialize()) {
+    uint8_t* uniq_id = flash.readUniqueId();
+    flashId=0;
+    for (byte i=4;i<8;i++) {
+      flashId=flashId<<8|uniq_id[i];
+    }
+    if(DEBUG) {
+      Serial.print("flashId=");
+      Serial.println(flashId);
+    }
   }
   else
     Serial.println("SPI Flash Init FAIL!");
+}
 
-  radio.initialize(RF69_433MHZ,NODEID,NETWORKID);
+void Moteino::init_ethernet(){
+  hasEthernet=digitalRead(ETHERNET_PIN);
+  if(DEBUG) {
+    Serial.print("ethernet presence : ");
+    Serial.println(hasEthernet);
+  }
+  if(hasEthernet) {
+      Serial.println("Start Ethernet");
+      ethc.stop();
+
+      if (DEBUG) Serial.println(F("Connecting Arduino to network..."));
+
+      delay(4000);
+      // Change the PIN used for the ethernet
+      Ethernet.select(ETHERNET_PIN);
+
+
+      // Connect to network amd obtain an IP address using DHCP
+      if (Ethernet.begin(params.ethMac) == 0)
+      {
+        if (DEBUG) Serial.println(F("DHCP Failed, reset Arduino to try again"));
+      }
+      else
+      {
+        if (DEBUG) Serial.println(F("Arduino connected to network using DHCP"));
+      }
+
+      if (DEBUG) {
+        Serial.print("My IP address: ");
+        for (byte thisByte = 0; thisByte < 4; thisByte++) {
+          // print the value of each byte of the IP address:
+          Serial.print(Ethernet.localIP()[thisByte], DEC);
+          Serial.print(".");
+        }
+        Serial.println();
+      }
+      W5100.setRetransmissionTime(0x07D0); //where each unit is 100us, so 0x07D0 (decimal 2000) means 200ms.
+      W5100.setRetransmissionCount(3); //That gives me a 3 second timeout on a bad server connection.
+
+      delay(100);
+  }
+}
+
+void Moteino::init_RF69(){
+  if(hasEthernet) params.nodeId= 0;
+  radio.initialize(RF69_433MHZ,params.nodeId,params.netWord);
   //radio.encrypt(ENCRYPTKEY); //OPTIONAL
   #ifdef IS_RFM69HW //only for RFM69HW
     radio.setHighPower();!
   #endif
+  if(acquire_RF69_infos) {
 
+  } else {
+    // the info are already retrieved from the EEPROM
+  }
 }
-
 
 // Fonction récupérant la température depuis le DS18B20
 // Retourne true si tout va bien, ou false en cas d'erreur
@@ -109,18 +181,25 @@ boolean Moteino::getTemperatureDS18B20(float *temp){
   return true;
 }
 
-void Moteino::sendToGateway(char *buff){
-  char trame[100];
-  memset(trame,'\0',100);
-  sprintf(trame,"%ld;%ld;%u;%lu;%u;",NETWORKID,GATEWAYID,NODEID,ID,VERSION);
-  strcat(trame, buff);
+void Moteino::sendRF69(byte targetId, char *trame){
   int sendSize = strlen(trame);
-
   // Send a message to rf69_server
   uint8_t data[100];
   for (int i=0;i<100;i++)
     data[i]=trame[i];
-  blink(LED,3);
+  blink(3);
+  radio.sendWithRetry(targetId, data, sendSize);
+}
 
-  radio.sendWithRetry(GATEWAYID, data, sendSize);
+void Moteino::sendBCRF69(char *data){
+  radio.send(RF69_BROADCAST_ADDR, data, strlen(data));
+}
+
+void Moteino::loop() {
+
+  if (radio.receiveDone())
+  {
+    // check if radio received rom to write on the flash, then flash it
+    CheckForWirelessHEX(radio, flash, true);
+  }
 }
