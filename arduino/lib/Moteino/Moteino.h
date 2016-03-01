@@ -17,10 +17,6 @@
 #include <Ethernet.h>
 #include <utility/w5100.h>
 
-#ifndef DEBUG
-#define DEBUG 0
-#endif
-
 // version of the code is
 // abc where a, b, c in {0, 1..9, a..y, z}
 #define VERSION "001"
@@ -31,6 +27,15 @@
 //6 byts to make an ethernet adress
 #define ETH_MAC_SIZE 6
 
+// comment to remove serial shell support
+#define HANDLE_SERIAL_SHELL
+
+// debug levels
+#define DEBUG_NONE 0
+#define DEBUG_WARN 1
+#define DEBUG_INFO 2
+#define DEBUG_FULL 3
+
 class Moteino {
 	public:
 
@@ -38,6 +43,8 @@ Moteino();
 ~Moteino();
 void setup();
 //call children setup() or initialize() or whatsoever
+
+boolean debug(int level);
 
 //////////////////////////////////////////////////////////////////
 // serial port
@@ -54,8 +61,6 @@ int serial_blength=0;
 void check_serial();
 void handleSerialMessage(char *message);
 
-byte LED_PIN = 9;
-
 //////////////////////////////////////////////////////////
 // storing in EEPROM
 //////////////////////////////////////////////////////////
@@ -67,24 +72,29 @@ int EEPROM_offset = 32;
 struct StoreStruct {
   // This is for version detection
   char version[4];
+	byte debug;
 	// set to true once network data has been retrieved
-	boolean netStored;
+	boolean paired;
   // RF69 IP and gateway are stored if they are transmitted by gateway
-	uint8_t nodeId, gwId;
+	uint8_t rdGW;
 	// network number, 0-255 . hardware filtering prevents trame from
 	// another network number from reaching this device
-	uint8_t netWord;
-	//do we need to encrypt the network ?
-	boolean encrypt;
-	//crypt key if encrypt is true
-	char crypt_key[CRYPT_SIZE];
+	uint8_t rdNet;
+	// network address to use if not set to RF69_BROADCAST_ADDR, and paired
+	uint8_t rdIp;
+	//do we need to rdCrypt the network ?
+	boolean rdCrypt;
+	//crypt key if rdCrypt is true
+	char rdKey[CRYPT_SIZE];
 	byte ethMac[ETH_MAC_SIZE];
 } params = {
   VERSION,
   // The default values
+	DEBUG_FULL,
 	false,
-	0,0,
+	0,
 	100,
+	RF69_BROADCAST_ADDR,
 	false,
 	{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
 	{ 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED },
@@ -113,6 +123,8 @@ OneWire owire;
 // DS12B30 = temperature probe
 byte DS18B20_PIN = 0x28;
 
+boolean getTemperatureDS18B20(float *temp);
+
 
 //////////////////////////////////////////////////////////
 // RF69 (wireless radio) chip
@@ -123,13 +135,13 @@ byte gw_RF69=0;
 // wireless radio
 RFM69_ATC radio;
 boolean acquire_RF69_IP=true;
-#define NET_IDLE 0
-#define NET_CHECKWORD 1
-#define NET_CHECKIP 2
-#define NET_TRANSMIT 3
-int radio_state=NET_IDLE;
+#define RADIO_IDLE 0
+#define RADIO_GETNET 1
+#define RADIO_GETIP 2
+#define RADIO_TRANSMIT 3
+int radio_state=RADIO_IDLE;
 unsigned long last_scan=0;
-unsigned long scan_delay=2000;
+unsigned long scan_delay=500;
 //init radio
 void init_RF69();
 
@@ -139,14 +151,21 @@ void sendRF69(char *data, byte targetId);
 // send data to the broadcast on same network WORD
 void sendBCRF69(char *data);
 
-uint8_t scan_word=0;
+char *RD_NET_DISCO="coucou";
+
+uint8_t radio_scan_net=0;
 // scan the networks to find a word with people on the net
-boolean scanNetWord();
+// return true if someone exists on present net word
+boolean rdScanNet();
 
 //once the net word is known, request an id on this net
+//return true if
 boolean scanNetIP();
 
-// set pairing mode on, answering netword=gw_addr to broadcast on net word
+//set to true when pairOn() : we must answer pairing requests
+boolean pairing=false;
+
+// set pairing mode on, answering rdNet=gw_addr to broadcast on net word
 void pairOn();
 
 //deactivate pairing mod
@@ -154,6 +173,17 @@ void pairOff();
 
 //check if data istransmitted through RF69
 void check_RF69();
+
+void changeRadioNet(uint8_t word);
+
+// request a new IP
+void radioAcquireIP();
+
+unsigned long radio_next_led=0;
+unsigned long radio_count_delay=3000;
+unsigned long radio_ledcount_duration=1000;
+//show the radio status with the led
+void radioLed();
 
 //////////////////////////////////////////////////////////
 
@@ -190,9 +220,31 @@ static char *ftoa(double f,char *a, int precision) {
  return ret;
 }
 
-void blink(int DELAY_MS);
+///////////////////////////////////////////////////////
+// LED
+///////////////////////////////////////////////////////
 
-boolean getTemperatureDS18B20(float *temp);
+#define LED_PIN  9
+
+#define LED_OFF 0
+#define LED_BLK 1
+#define LED_FLS 2
+#define LED_CNT 3
+
+unsigned long led_nxtchange=0;
+unsigned long led_swdelay=0;
+int led_remains=0;
+int led_state=LED_OFF;
+
+void ledBlink(unsigned long delay_ms);
+
+void ledFlash(unsigned long delay_ms);
+
+void ledCount(int nb, unsigned long delay_ms, boolean prio=false);
+
+void check_led();
+
+/////////////////////////////////////////////////////////
 
 void loop();
 
