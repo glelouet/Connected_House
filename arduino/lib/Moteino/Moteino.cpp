@@ -71,6 +71,14 @@ void Moteino::printParams(){
   Serial.print("gwId=");Serial.println(params.gwId);
   Serial.print("netWord=");Serial.println(params.netWord);
   Serial.print("encrypt=");Serial.println(params.encrypt);
+  Serial.print("key=");for(int i=0;i<CRYPT_SIZE;i++) {
+    Serial.print(params.crypt_key[i], DEC);
+    Serial.print(' ');
+  } Serial.println();
+  Serial.print("ethmac=");for(int i=0;i<ETH_MAC_SIZE;i++) {
+    Serial.print(params.ethMac[i], DEC);
+    Serial.print(' ');
+  } Serial.println();
 }
 
 void Moteino::handleSerialMessage(char *message) {
@@ -80,7 +88,17 @@ void Moteino::handleSerialMessage(char *message) {
     Serial.println(netword);
     params.netWord=netword;
     radio.setNetwork(netword);
-  } else if(strcmp(message, "write")==0) {
+  } else if(strcmp(message, "scanword")==0) {
+    radio_state=NET_IDLE;
+  } else if(strncmp(message, "netIP=", strlen("netIP="))==0) {
+    int netIP = atoi(message+strlen("netIP="));
+    Serial.print("setting net IP to ");
+    Serial.println(netIP);
+    params.nodeId=netIP;
+    radio.setAddress(netIP);
+  } else if(strcmp(message, "scanIP")==0) {
+    radio_state=NET_CHECKIP;
+  }else if(strcmp(message, "write")==0) {
     writeEEPROM();
     Serial.println("writing params to EEPROM");
   } else if(strcmp(message, "load")==0) {
@@ -93,8 +111,12 @@ void Moteino::handleSerialMessage(char *message) {
     pairOn();
   } else if(strcmp(message, "pairoff")==0) {
     pairOff();
+  } else if(strcmp(message, "sniff")==0) {
+    radio.promiscuous();
+  } else if(strcmp(message, "scanword")==0) {
+    radio_state=NET_IDLE;
   } else if(strncmp(message, "blink ", strlen("blink "))==0) {
-    int time = atoi(message+strlen("blink "));
+    int time = 1000*atoi(message+strlen("blink "));
     blink(time);
   } else {
     Serial.print("discarding ");
@@ -194,18 +216,30 @@ void Moteino::init_ethernet(){
 ///////////////////////////////////////////////////////////
 
 void Moteino::init_RF69(){
-  if(hasEthernet) params.nodeId=gw_RF69;
-  radio.initialize(RF69_433MHZ,params.nodeId,params.netWord);
-  //radio.encrypt(ENCRYPTKEY); //OPTIONAL
+  if(hasEthernet) {
+    params.nodeId=gw_RF69;
+    if(acquire_RF69_IP) {
+      Serial.println("warning : should discover IP but has ethernet chip so static IP");
+      acquire_RF69_IP=false;
+    }
+  }
+  if (params.netStored){//we already have net word
+    if(acquire_RF69_IP){
+      radio.initialize(RF69_433MHZ,0,params.netWord);
+      radio.promiscuous();
+      radio_state=NET_CHECKIP;
+    } else {
+      radio.initialize(RF69_433MHZ,params.nodeId,params.netWord);
+      radio_state=NET_TRANSMIT;
+    }
+  } else {
+    radio.initialize(RF69_433MHZ,0,0);
+    radio_state=NET_IDLE;
+  }
   #ifdef IS_RFM69HW //only for RFM69HW
     radio.setHighPower();!
   #endif
   radio.enableAutoPower(-60);
-  if(acquire_RF69_infos) {
-
-  } else {
-    // the info are already retrieved from the EEPROM
-  }
 }
 
 void Moteino::pairOn(){
@@ -215,6 +249,40 @@ void Moteino::pairOn(){
 void Moteino::pairOff(){
 
 }
+
+boolean Moteino::scanNetWord(){
+  if(radio_state==NET_IDLE){
+    scan_word=0;
+    radio_state=NET_CHECKWORD;
+    last_scan=millis();
+    radio.setNetwork(scan_word);
+    sendBCRF69("coucou");
+    Serial.print("coucou on net word ");
+    Serial.println(scan_word);
+  } else {//radio_state == NET_CHECKWORD
+    if (radio.receiveDone()) {
+      Serial.print("while checking for net word ");
+      Serial.print(scan_word);
+      Serial.print(" received ");
+      Serial.print(radio.DATALEN);
+      Serial.println(" data");
+      return true;
+    } else if(millis()-last_scan>scan_delay) {
+      scan_word++;
+      radio.setNetwork(scan_word);
+      last_scan=millis();
+      sendBCRF69("coucou");
+      Serial.print("coucou on net word ");
+      Serial.println(scan_word);
+    }
+  }
+
+}
+
+boolean Moteino::scanNetIP(){
+
+}
+
 
 void Moteino::sendRF69(char *trame, byte targetId){
   int sendSize = strlen(trame);
@@ -231,13 +299,32 @@ void Moteino::sendBCRF69(char *data){
 }
 
 void Moteino::check_RF69(){
-  if (radio.receiveDone()) {
-    if(strcmp("test", (char *)radio.DATA)==0) {
-      Serial.println("received test on RF69");
-    }else
-    // check if radio received rom to write on the flash, then flash it
-    CheckForWirelessHEX(radio, flash, true);
-  }
+  switch (radio_state) {
+    case NET_IDLE:
+    case NET_CHECKWORD :
+      if(scanNetWord())
+        if(acquire_RF69_IP){
+          radio_state=NET_CHECKIP;
+        } else {
+          radio.setAddress(params.nodeId);
+          radio_state=NET_TRANSMIT;
+          radio.promiscuous(false);
+        };
+      break;
+    case NET_CHECKIP:if(scanNetIP()) radio_state=NET_TRANSMIT;break;
+    case NET_TRANSMIT :
+      if (radio.receiveDone()) {
+        Serial.print("received on RF69 ");
+        Serial.println(radio.DATALEN);
+        if(strcmp("test", (char *)radio.DATA)==0) {
+          Serial.println("received test on RF69");
+        }else
+        // check if radio received rom to write on the flash, then flash it
+          CheckForWirelessHEX(radio, flash, true);
+        } else {
+          //Serial.println("no data transmitted");
+        }
+    }
 }
 
 /////////////////////////////////////////////////

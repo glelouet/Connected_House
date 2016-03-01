@@ -25,6 +25,12 @@
 // abc where a, b, c in {0, 1..9, a..y, z}
 #define VERSION "001"
 
+//16 bytes for a crypt key
+#define CRYPT_SIZE 16
+
+//6 byts to make an ethernet adress
+#define ETH_MAC_SIZE 6
+
 class Moteino {
 	public:
 
@@ -64,15 +70,15 @@ struct StoreStruct {
 	// set to true once network data has been retrieved
 	boolean netStored;
   // RF69 IP and gateway are stored if they are transmitted by gateway
-	byte nodeId, gwId;
+	uint8_t nodeId, gwId;
 	// network number, 0-255 . hardware filtering prevents trame from
 	// another network number from reaching this device
-	byte netWord;
+	uint8_t netWord;
 	//do we need to encrypt the network ?
 	boolean encrypt;
 	//crypt key if encrypt is true
-	uint8_t crypt_key[16];
-	byte ethMac[6];
+	char crypt_key[CRYPT_SIZE];
+	byte ethMac[ETH_MAC_SIZE];
 } params = {
   VERSION,
   // The default values
@@ -116,9 +122,14 @@ byte DS18B20_PIN = 0x28;
 byte gw_RF69=0;
 // wireless radio
 RFM69_ATC radio;
-// unique ID of flash chip
-uint32_t flashId = 1;
-boolean acquire_RF69_infos=true;
+boolean acquire_RF69_IP=true;
+#define NET_IDLE 0
+#define NET_CHECKWORD 1
+#define NET_CHECKIP 2
+#define NET_TRANSMIT 3
+int radio_state=NET_IDLE;
+unsigned long last_scan=0;
+unsigned long scan_delay=2000;
 //init radio
 void init_RF69();
 
@@ -127,6 +138,13 @@ void sendRF69(char *data, byte targetId);
 
 // send data to the broadcast on same network WORD
 void sendBCRF69(char *data);
+
+uint8_t scan_word=0;
+// scan the networks to find a word with people on the net
+boolean scanNetWord();
+
+//once the net word is known, request an id on this net
+boolean scanNetIP();
 
 // set pairing mode on, answering netword=gw_addr to broadcast on net word
 void pairOn();
@@ -147,10 +165,12 @@ void check_RF69();
 #endif
 // self flasher
 SPIFlash flash;
+// unique ID of flash chip
+uint32_t flashId = 1;
 //init the flash part
 void init_flash();
 
-boolean hasEthernet=0;
+boolean hasEthernet=false;
 byte ETHERNET_PIN=4;
 EthernetClient ethc;
 // initialize the ethernet client
@@ -162,9 +182,10 @@ static char *ftoa(double f,char *a, int precision) {
  char *ret = a;
  long heiltal = (long)f;
  itoa(heiltal, a, 10);
+ long desimal = abs((long)((f - heiltal) * p[precision]));
+ if(desimal==0) return ret;
  while (*a != '\0') a++;
  *a++ = '.';
- long desimal = abs((long)((f - heiltal) * p[precision]));
  itoa(desimal, a, 10);
  return ret;
 }
