@@ -22,7 +22,7 @@
 #define VERSION "001"
 
 //16 bytes for a crypt key
-#define CRYPT_SIZE 16
+#define RF69_CRYPT_SIZE 16
 
 //6 byts to make an ethernet adress
 #define ETH_MAC_SIZE 6
@@ -81,11 +81,11 @@ struct StoreStruct {
 	// another network number from reaching this device
 	uint8_t rdNet;
 	// network address to use if not set to RF69_BROADCAST_ADDR, and paired
-	uint8_t rdIp;
+	uint8_t rdIP;
 	//do we need to rdCrypt the network ?
 	boolean rdCrypt;
 	//crypt key if rdCrypt is true
-	char rdKey[CRYPT_SIZE];
+	char rdKey[RF69_CRYPT_SIZE];
 	byte ethMac[ETH_MAC_SIZE];
 } params = {
   VERSION,
@@ -130,6 +130,8 @@ boolean getTemperatureDS18B20(float *temp);
 // RF69 (wireless radio) chip
 //////////////////////////////////////////////////////////
 
+private :
+
 //default gateway address
 byte gw_RF69=0;
 // wireless radio
@@ -145,48 +147,89 @@ unsigned long scan_delay=500;
 //init radio
 void init_RF69();
 
-// send data to a RF69 station if exists
+public :
+
+//select a random network, a random crypt key, and connect itself.
+void rdRandom();
+
+// return the present connection state of the radio : idle, search netowrk, set ip, transmit
+int rdState();
+
+// send data to a RF69 station if exists and connected
 void sendRF69(char *data, byte targetId);
 
 // send data to the broadcast on same network WORD
 void sendBCRF69(char *data);
 
+// search radio network and crypt key
+void rdSNet();
+
+//set radio network
+void rdChNet(uint8_t net);
+
+// search radio ip
+void rdSIP();
+
+void rdChIP(uint8_t ip);
+
+bool rdPairing();
+
+// set pairing mode on, answering rdNet:key to broadcast on net word
+void rdPairOn();
+
+//deactivate pairing mod
+void rdPairOff();
+
+//flash the led for 2 s and send DISCO on network broadcast
+void rdLedDisco();
+
+//each element on the network must blink the led
+void rdIdLed();
+
+private :
+
+#define RF69_PAIRING_MS 300000 //5min of pairing time
+
+//time at which we deactivate pairing
+unsigned long pairingEnd=0;
+
+//true when activating pair mode
+bool m_pairing=false;
+
 char *RD_NET_DISCO="coucou";
+
+char *RD_LED_DISCO="DISCO";
 
 uint8_t radio_scan_net=0;
 // scan the networks to find a word with people on the net
 // return true if someone exists on present net word
 boolean rdScanNet();
 
+//last IP we sent message to
+uint8_t radio_scan_ip=0;
+bool radio_scan_ip_answered=false;
+unsigned long radio_last_ip_request;
+unsigned long radio_iprequest_delay=300; //300ms between each IP request
+
 //once the net word is known, request an id on this net
 //return true if
-boolean scanNetIP();
-
-//set to true when pairOn() : we must answer pairing requests
-boolean pairing=false;
-
-// set pairing mode on, answering rdNet=gw_addr to broadcast on net word
-void pairOn();
-
-//deactivate pairing mod
-void pairOff();
-
-//check if data istransmitted through RF69
-void check_RF69();
-
-void changeRadioNet(uint8_t word);
-
-// request a new IP
-void radioAcquireIP();
+boolean rdScanIP();
 
 unsigned long radio_next_led=0;
 unsigned long radio_count_delay=3000;
 unsigned long radio_ledcount_duration=1000;
+
+public :
+
+//check if data istransmitted through RF69
+void check_RF69();
+
 //show the radio status with the led
 void radioLed();
 
 //////////////////////////////////////////////////////////
 
+public :
 
 #ifdef __AVR_ATmega1284P__
   byte FLASH_PIN = 23; // FLASH SS on D23
@@ -224,6 +267,8 @@ static char *ftoa(double f,char *a, int precision) {
 // LED
 ///////////////////////////////////////////////////////
 
+private :
+
 #define LED_PIN  9
 
 #define LED_OFF 0
@@ -236,6 +281,8 @@ unsigned long led_swdelay=0;
 int led_remains=0;
 int led_state=LED_OFF;
 
+public :
+
 void ledBlink(unsigned long delay_ms);
 
 void ledFlash(unsigned long delay_ms);
@@ -245,6 +292,8 @@ void ledCount(int nb, unsigned long delay_ms, boolean prio=false);
 void check_led();
 
 /////////////////////////////////////////////////////////
+
+public :
 
 void loop();
 

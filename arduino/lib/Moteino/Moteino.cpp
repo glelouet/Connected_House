@@ -53,7 +53,7 @@ void Moteino::check_serial(){
     }
     if(serial_blength>=SERIAL_BUFFER_SIZE) {
       serial_buffer[SERIAL_BUFFER_SIZE-1]='\0';
-      Serial.println("error : serial buffer overflow, discarding serial buffer :");
+      Serial.println(F("error : serial buffer overflow, discarding serial buffer :"));
       Serial.println(serial_buffer);
       serial_blength=0;
     }
@@ -63,67 +63,66 @@ void Moteino::check_serial(){
 #ifdef  HANDLE_SERIAL_SHELL
 
 void Moteino::printParams(){
-  Serial.print("version=");Serial.println(params.version);
-  Serial.print("debug=");Serial.println(params.debug);
-  Serial.print("paired=");Serial.println(params.paired);
-  Serial.print("rdGW=");Serial.println(params.rdGW);
-  Serial.print("rdNet=");Serial.println(params.rdNet);
-  Serial.print("rdCrypt=");Serial.println(params.rdCrypt);
-  Serial.print("rdKey=");for(int i=0;i<CRYPT_SIZE;i++) {
+  Serial.print(F("version="));Serial.println(params.version);
+  Serial.print(F("debug="));Serial.println(params.debug);
+  Serial.print(F("paired="));Serial.println(params.paired);
+  Serial.print(F("rdGW="));Serial.println(params.rdGW);
+  Serial.print(F("rdNet="));Serial.println(params.rdNet);
+  Serial.print(F("rdCrypt="));Serial.println(params.rdCrypt);
+  Serial.print(F("rdKey="));for(int i=0;i<RF69_CRYPT_SIZE;i++) {
     Serial.print(params.rdKey[i], DEC);
     Serial.print(' ');
   } Serial.println();
-  Serial.print("ethMac=");for(int i=0;i<ETH_MAC_SIZE;i++) {
+  Serial.print(F("ethMac="));for(int i=0;i<ETH_MAC_SIZE;i++) {
     Serial.print(params.ethMac[i], DEC);
     Serial.print(' ');
   } Serial.println();
 }
 
 void Moteino::handleSerialMessage(char *message) {
-  if(strncmp(message, "rdnet=", strlen("rdnet="))==0) {
-    uint8_t rdNet = atoi(message+strlen("rdnet="));
-    Serial.print("set rdnet ");
-    Serial.println(rdNet);
-    changeRadioNet(rdNet);
-  } else if(strcmp(message, "rd")==0) {
-    Serial.print("rdnet=");
+  if(strcmp(message, "rd")==0) {
+    Serial.print(F("rdnet="));
     Serial.println(params.rdNet);
-    Serial.print("rdip=");
-    Serial.println(params.rdIp);
-    params.paired=false;
-    radio_state=RADIO_IDLE;
+    Serial.print(F("rdip="));
+    Serial.println(params.rdIP);
+  } else if(strncmp(message, "rdnet=", strlen("rdnet="))==0) {
+    uint8_t rdNet = atoi(message+strlen("rdnet="));
+    Serial.print(F("set rdnet "));
+    Serial.println(rdNet);
+    rdChNet(rdNet);
   } else if(strcmp(message, "rdsnet")==0) {
-    Serial.println("search rd net");
-    params.paired=false;
-    radio_state=RADIO_IDLE;
+    Serial.println(F("search rd net"));
+    rdSNet();
   } else if(strncmp(message, "rdip=", strlen("rdip="))==0) {
     uint8_t netIP = atoi(message+strlen("rdip="));
-    Serial.print("set rdip ");
+    Serial.print(F("set rdip "));
     Serial.println(netIP);
-    params.rdIp=netIP;
-    radio.setAddress(netIP);
+    rdChIP(netIP);
   } else if(strcmp(message, "rdsip")==0) {
-    Serial.println("acquiring radio IP");
-    radioAcquireIP();
+    Serial.println(F("acquiring radio IP"));
+    rdSIP();
     radio_state=RADIO_GETIP;
+  } else if(strcmp(message, "rdran")==0) {
+    Serial.println(F("ran rd data"));
+    rdRandom();
   } else if(strcmp(message, "write")==0) {
     writeEEPROM();
-    Serial.println("wr2EEPROM ok");
+    Serial.println(F("wr2EEPROM ok"));
   } else if(strcmp(message, "load")==0) {
     loadEEPROM();
-    Serial.println("loadEEPROM");
+    Serial.println(F("loadEEPROM"));
     printParams();
   } else if(strcmp(message, "params")==0) {
     printParams();
   } else if(strncmp(message, "dbg=", strlen("dbg="))==0) {
     int debug = atoi(message+strlen("dbg="));
-    Serial.print("set dbg ");
+    Serial.print(F("set dbg "));
     Serial.println(debug);
     params.debug=debug;
   } else if(strcmp(message, "pairon")==0) {
-    pairOn();
+    rdPairOn();
   } else if(strcmp(message, "pairoff")==0) {
-    pairOff();
+    rdPairOff();
   } else if(strncmp(message, "blink ", strlen("blink "))==0) {
     int time = atoi(message+strlen("blink "));
     ledBlink(time);
@@ -131,7 +130,7 @@ void Moteino::handleSerialMessage(char *message) {
     int time = atoi(message+strlen("flash "));
     ledFlash(time);
   } else {
-    Serial.print("discarding ");
+    Serial.print(F("discarding "));
     Serial.println(message);
   }
 }
@@ -141,7 +140,7 @@ void Moteino::handleSerialMessage(char *message) {
 void Moteino::printParams(){}
 
 void Moteino::handleSerialMessage(char *message) {
-    Serial.print("serialOFF");
+    Serial.print(F("serialOFF"));
     Serial.println(message);
 }
 
@@ -153,7 +152,7 @@ void Moteino::init_EEPROM(){
 }
 
 boolean Moteino::loadEEPROM(){
-    if(debug(DEBUG_INFO)) Serial.println("acquiring parameters from EEPROM");
+    if(debug(DEBUG_INFO)) Serial.println(F("acquiring parameters from EEPROM"));
     // To make sure there are settings, and they are YOURS!
     // If nothing is found it will use the default settings.
     if (EEPROM.read(EEPROM_offset + 0) == VERSION[0]
@@ -162,7 +161,7 @@ boolean Moteino::loadEEPROM(){
         for (unsigned int t=0; t<sizeof(params); t++)
           *((char*)&params + t) = EEPROM.read(EEPROM_offset + t);
     } else {
-      if(debug(DEBUG_WARN)) Serial.println("incorrect version in EEPROM");
+      if(debug(DEBUG_WARN)) Serial.println(F("incorrect version in EEPROM"));
       return false;
     }
   return true;
@@ -183,22 +182,22 @@ void Moteino::init_flash(){
       flashId=flashId<<8|uniq_id[i];
     }
     if(debug(DEBUG_INFO)) {
-      Serial.print("flashId=");
+      Serial.print(F("flashId="));
       Serial.println(flashId);
     }
   }
   else
-    Serial.println("SPI Flash Init FAIL!");
+    Serial.println(F("SPI Flash Init FAIL!"));
 }
 
 void Moteino::init_ethernet(){
   hasEthernet=digitalRead(ETHERNET_PIN);
   if(debug(DEBUG_FULL)) {
-    Serial.print("ethernet presence : ");
+    Serial.print(F("ethernet presence : "));
     Serial.println(hasEthernet);
   }
   if(hasEthernet) {
-      Serial.println("Start Ethernet");
+      Serial.println(F("Start Ethernet"));
       ethc.stop();
 
       if(debug(DEBUG_INFO)) Serial.println(F("Connecting Arduino to network..."));
@@ -219,11 +218,11 @@ void Moteino::init_ethernet(){
       }
 
       if(debug(DEBUG_INFO)) {
-        Serial.print("My IP address: ");
+        Serial.print(F("My IP address: "));
         for (byte thisByte = 0; thisByte < 4; thisByte++) {
           // print the value of each byte of the IP address:
           Serial.print(Ethernet.localIP()[thisByte], DEC);
-          Serial.print(".");
+          Serial.print(F("."));
         }
         Serial.println();
       }
@@ -241,7 +240,7 @@ void Moteino::init_ethernet(){
 void Moteino::init_RF69(){
   if(hasEthernet) {
     if(acquire_RF69_IP && debug(DEBUG_WARN))
-      Serial.println("warning : should discover IP but has ethernet chip so static IP");
+      Serial.println(F("warning : should discover IP but has ethernet chip so static IP"));
   }
   if (params.paired){//we already have net
     if(hasEthernet){
@@ -267,14 +266,43 @@ void Moteino::init_RF69(){
   radio.enableAutoPower(-60);
 }
 
-void Moteino::pairOn(){
-  pairing=true;
-  radio.promiscuous();
+void Moteino::rdRandom(){
+  params.rdNet=random(255);
+  for(int i=0;i<RF69_CRYPT_SIZE;i++)
+   params.rdKey[i]=random(255);
+  radio.setNetwork(params.rdNet);
+  radio.encrypt(params.rdKey);
+
 }
 
-void Moteino::pairOff(){
-  pairing=true;
+void Moteino::rdSNet(){
+  params.paired=false;
+  writeEEPROM();
+  radio_state=RADIO_IDLE;
+}
+
+void Moteino::rdPairOn(){
+  m_pairing=true;
+  radio.promiscuous();
+  pairingEnd=millis()+RF69_PAIRING_MS;
+}
+
+void Moteino::rdPairOff(){
+  m_pairing=false;
   radio.promiscuous(false);
+}
+
+bool Moteino::rdPairing(){
+  return m_pairing;
+}
+
+void Moteino::rdLedDisco(){
+  ledCount(20, 100, true );
+}
+
+void Moteino::rdIdLed(){
+  sendBCRF69(RD_LED_DISCO);
+  rdLedDisco();
 }
 
 boolean Moteino::rdScanNet(){
@@ -285,27 +313,52 @@ boolean Moteino::rdScanNet(){
     radio.setNetwork(radio_scan_net);
     sendBCRF69(RD_NET_DISCO);
     if(debug(DEBUG_FULL)){
-      Serial.print("test rd net ");
+      Serial.print(F("test rd net "));
       Serial.println(radio_scan_net);
     }
   } else {//radio_state == RADIO_GETNET
     if (radio.receiveDone()) {
-      ledCount(10, 100, true);
+      rdLedDisco();
       return true;
     } else if(millis()-last_scan>scan_delay) {
       radio_scan_net++;
       radio.setNetwork(radio_scan_net);
       last_scan=millis();
       sendBCRF69(RD_NET_DISCO);
+      if(debug(DEBUG_FULL)){
+        Serial.print(F("test rd net "));
+        Serial.println(radio_scan_net);
+      }
     }
   }
   return false;
 }
 
-boolean Moteino::scanNetIP(){
-
+boolean Moteino::rdScanIP(){
+  if (radio.receiveDone()) {
+    if(radio.SENDERID==radio_scan_ip) radio_scan_ip_answered=true;
+  }
+  unsigned long time = millis();
+  if(radio_scan_ip_answered) {
+      radio_scan_ip_answered=false;
+      radio_scan_ip++;
+      radio_last_ip_request=time;
+      Serial.print(F("scanning ip "));
+      Serial.println(radio_scan_ip);
+      sendRF69("PING", radio_scan_ip);
+      return false;
+  }
+  if(time>radio_last_ip_request+radio_iprequest_delay){// we keep that IP
+    radio.setAddress(radio_scan_ip);
+    params.rdIP=radio_scan_ip;
+    return true;
+  }
+  return false;
 }
 
+int Moteino::rdState() {
+  return radio_state;
+}
 
 void Moteino::sendRF69(char *trame, byte targetId){
   int sendSize = strlen(trame);
@@ -320,55 +373,72 @@ void Moteino::sendBCRF69(char *data){
   radio.send(RF69_BROADCAST_ADDR, data, strlen(data));
 }
 
-void Moteino::changeRadioNet(uint8_t net){
+void Moteino::rdChNet(uint8_t net){
   params.rdNet=net;
   radio.setNetwork(net);
   params.paired=true;
   if(acquire_RF69_IP) {
     radio_state = RADIO_GETIP;
   } else {
+    radio.setAddress(params.rdIP);
     radio_state = RADIO_TRANSMIT;
   }
+  writeEEPROM();
 }
 
-void Moteino::radioAcquireIP(){
-  params.rdIp=RF69_BROADCAST_ADDR;
+void Moteino::rdSIP(){
+  params.rdIP=RF69_BROADCAST_ADDR;
   radio_state=RADIO_GETIP;
+}
+
+void Moteino::rdChIP(uint8_t ip){
+  params.rdIP=ip;
+  radio.setAddress(ip);
+  radio_state = RADIO_TRANSMIT;
+  writeEEPROM();
 }
 
 void Moteino::check_RF69(){
   switch (radio_state) {
     case RADIO_IDLE:
     case RADIO_GETNET :
-      if(rdScanNet())
+      if(rdScanNet()){
         if(acquire_RF69_IP){
           radio_state=RADIO_GETIP;
         } else {
           radio.setAddress(hasEthernet?gw_RF69:1);
           radio_state=RADIO_TRANSMIT;
           radio.promiscuous(false);
-        };
-      break;
-    case RADIO_GETIP:if(scanNetIP()) radio_state=RADIO_TRANSMIT;break;
+        }
+      }
+    break;
+    case RADIO_GETIP:
+      if(rdScanIP())
+        radio_state=RADIO_TRANSMIT;
+    break;
     case RADIO_TRANSMIT :
+      if(m_pairing && pairingEnd<=millis())
+        rdPairOff();
       if (radio.receiveDone()) {
-        if(pairing && strcmp(RD_NET_DISCO, (char *)radio.DATA)==0) {
-          Serial.println("pairing");
+        if(m_pairing && strcmp(RD_NET_DISCO, (char *)radio.DATA)==0) {
+          Serial.println(F("pairing"));
           sendBCRF69("pairingACK");
           ledCount(10,100,true);
-        }else
+        } else if (strcmp(RD_LED_DISCO, (char *)radio.DATA)==0){
+          rdLedDisco();
+        } else
         // check if radio received rom to write on the flash, then flash it
           CheckForWirelessHEX(radio, flash, true);
-        } else {
-          //Serial.println("no data transmitted");
-        }
+      } else {
+          //Serial.println(F("no data transmitted"));
+      }
     }
     radioLed();
 }
 
 void Moteino::radioLed(){
   if(millis()>=radio_next_led){
-    if(radio_state==RADIO_TRANSMIT && pairing){
+    if(radio_state==RADIO_TRANSMIT && m_pairing){
       if(led_state==LED_OFF)
         ledBlink(radio_ledcount_duration);
     } else {
