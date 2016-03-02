@@ -387,8 +387,15 @@ void Moteino::rdChNet(uint8_t net){
 }
 
 void Moteino::rdSIP(){
+  if(radio_state==RADIO_GETIP) return;
   params.rdIP=RF69_BROADCAST_ADDR;
   radio_state=RADIO_GETIP;
+  radio_scan_ip_answered=false;
+  radio_scan_ip=0;
+  radio_last_ip_request=millis();
+  Serial.print(F("scanning ip "));
+  Serial.println(radio_scan_ip);
+  sendRF69("PING", radio_scan_ip);
 }
 
 void Moteino::rdChIP(uint8_t ip){
