@@ -203,7 +203,7 @@ void Moteino::rdLoopScanNet(){
       Serial.print(params.rdNet);
       for(int i=0;i<RF69_CRYPT_SIZE;i++) {
         Serial.print(' ');
-        Serial.print(params.rdKey[i], DEC);
+        Serial.print((byte)params.rdKey[i], DEC);
       }
       Serial.println();
     }
