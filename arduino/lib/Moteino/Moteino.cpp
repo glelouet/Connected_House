@@ -78,7 +78,7 @@ void Moteino::init_flash(){
       Serial.println(flashId);
     }
   }
-  else
+  else if(debug(DEBUG_WARN))
     Serial.println(F("SPI Flash Init FAIL!"));
 }
 
@@ -145,10 +145,15 @@ void Moteino::init_RF69(){
 }
 
 void Moteino::rdRandom(){
+  params.paired=true;
   params.rdNet=random(255);
   for(int i=0;i<RF69_CRYPT_SIZE;i++)
    params.rdKey[i]=random(255);
   params.rdIP=1;
+  writeEEPROM();
+  if(debug(DEBUG_INFO)){
+    Serial.println(F("randomed network"));
+  }
   rdGetNet();
 }
 
@@ -187,7 +192,7 @@ void Moteino::rdGetNet(){
 void Moteino::rdLoopScanNet(){
   if (radio.receiveDone()
       && radio.DATALEN==3+1+RF69_CRYPT_SIZE
-      && strncmp((char *)radio.DATA, "len", 3)==0 ) {
+      && strncmp((char *)radio.DATA, "net", 3)==0 ) {
     params.paired=true;
     params.rdNet=radio.DATA[3];
     for(int i=0;i<RF69_CRYPT_SIZE;i++) {
@@ -284,19 +289,27 @@ bool Moteino::rdPairing(){
 }
 
 void Moteino::rdLoopPairing(){
-  if(pairingEnd<=millis())
+  if(pairingEnd<=millis()) {
+    if(debug(DEBUG_INFO))
+      Serial.println("pairing mode timeout");
     rdPairOff();
-  else {
+  } else {
     if (radio.receiveDone()) {
       if(strcmp(RD_NET_DISCO, (char *)radio.DATA)==0) {
-        char data[3+1+RF69_CRYPT_SIZE];//netId, cryptkey
+        char data[3+1+RF69_CRYPT_SIZE+1];//"net",netId, cryptkey, 0
         data[0]='n';data[1]='e';data[2]='t';
         data[3]=params.rdNet;
         for(int i=0;i<RF69_CRYPT_SIZE;i++){
           data[i+4]=params.rdKey[i];
         }
+        data[3+1+RF69_CRYPT_SIZE]=0;
         sendBCRF69(data);
+        if(debug(DEBUG_FULL))
+          Serial.println("answering correct pairing request");
         ledCount(10,100,true);
+      } else {
+        if(debug(DEBUG_FULL))
+          Serial.println("pairing received incorrect trame");
       }
     }
   }

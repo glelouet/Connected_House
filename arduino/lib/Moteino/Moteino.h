@@ -19,7 +19,7 @@
 
 // version of the code is
 // abc where a, b, c in {0, 1..9, a..y, z}
-#define VERSION "003"
+#define VERSION "004"
 
 //16 bytes for a crypt key
 #define RF69_CRYPT_SIZE 16
@@ -33,6 +33,8 @@
 #define DEBUG_INFO 2
 #define DEBUG_FULL 3
 
+#define INCLUDE_DEBUG
+
 class Moteino {
 	public:
 
@@ -41,6 +43,7 @@ Moteino();
 void setup();
 //call children setup() or initialize() or whatsoever
 
+//return true if we debug at given level
 boolean debug(int level);
 
 //////////////////////////////////////////////////////////////////
@@ -176,7 +179,7 @@ int radio_state=RADIO_IDLE;
 #define RADIO_SCANNET 255
 
 unsigned long last_scan=0;
-unsigned long scan_net_delay=500;
+unsigned long scan_net_delay=2000;
 //init radio
 void init_RF69();
 

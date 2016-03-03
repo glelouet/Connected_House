@@ -51,7 +51,7 @@ void sendTemp(){
 		memset(trame,'\0',100);
 		sprintf(trame,"%lu;%c%c%c;",moteino.flashId,VERSION[0],VERSION[1],VERSION[2]);
 		  strcat(trame, buf2);
-  	moteino.sendRF69(moteino.params.gwId, trame);
+  	moteino.sendRF69(gw_, trame);
   }
 }
 

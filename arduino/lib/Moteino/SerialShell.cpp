@@ -38,13 +38,15 @@ void SerialShell::printParams(){
   Serial.print(F("paired="));Serial.println(m->params.paired);
   Serial.print(F("rdNet="));Serial.println(m->params.rdNet);
   Serial.print(F("rdIP="));Serial.println(m->params.rdIP);
-  Serial.print(F("rdKey="));for(int i=0;i<RF69_CRYPT_SIZE;i++) {
-    Serial.print(m->params.rdKey[i], DEC);
+  Serial.print(F("rdKey="));
+  for(int i=0;i<RF69_CRYPT_SIZE;i++) {
     Serial.print(' ');
+    Serial.print((byte)m->params.rdKey[i]);
   } Serial.println();
-  Serial.print(F("ethMac="));for(int i=0;i<ETH_MAC_SIZE;i++) {
-    Serial.print(m->params.ethMac[i], DEC);
+  Serial.print(F("ethMac="));
+  for(int i=0;i<ETH_MAC_SIZE;i++) {
     Serial.print(' ');
+    Serial.print(m->params.ethMac[i]);
   } Serial.println();
 }
 
