@@ -1,21 +1,40 @@
 #include <Moteino.h>
 #include <Button.h>
+#include <ButtonCommand.h>
 #include <SerialShell.h>
 
 #define BTN_PIN 3
-#define USE_SERIAL_SHELL
+#define MOTEINO_HAS_BTN
+#define MOTEINO_HAS_SERIAL
+
+//uncomment to prevent the include of serial and button-related code
+//#define MOTEINO_NO_COMMAND
+
+
+#ifdef MOTEINO_NO_COMMAND
+#undef MOTEINO_HAS_BTN
+#undef MOTEINO_HAS_SERIAL
+#endif
 
 Moteino moteino;
+#ifdef MOTEINO_HAS_BTN
 Button btn;
-#ifdef USE_SERIAL_SHELL
+ButtonCommand bc;
+#endif
+#ifdef MOTEINO_HAS_SERIAL
 SerialShell sh;
 #endif
 
 void setup()
 {
   moteino.setup();
+  #ifdef MOTEINO_HAS_BTN
   btn.init(BTN_PIN, 500);
-  #ifdef USE_SERIAL_SHELL
+  bc.init(&btn, &moteino);
+  #else
+  moteino.rdSearchNet();
+  #endif
+  #ifdef MOTEINO_HAS_SERIAL
   sh.init(&moteino);
   #endif
 }
@@ -25,7 +44,7 @@ unsigned long delay_ms=500;
 
 void loop(){
   moteino.loop();
-  #ifdef USE_SERIAL_SHELL
+  #ifdef MOTEINO_HAS_SERIAL
   sh.loop();
   #endif
   if(moteino.rdState()==RADIO_TRANSMIT && !moteino.rdPairing()) {
@@ -34,38 +53,7 @@ void loop(){
       last_send = millis();
     }
   }
-  btn.check();
-  if(btn.hasSeries()) {
-    byte * series=btn.pop();
-    if(series[1]==0){// one push
-      if(series[0]<=10) { // push<=1s : identify elements on the network
-        if(moteino.debug(DEBUG_FULL)){
-          Serial.println(F("btn press led"));
-        }
-        moteino.rdIdLed();
-      }  else if(series[0]<=30){// 1s<push<=3s : acquire new net
-        if(moteino.debug(DEBUG_FULL)){
-          Serial.println(F("btn acquire net"));
-        }
-        moteino.rdSearchNet();
-      } else if(series[0]<=100){// 3s<push<=10s : random net and pairing
-        if(moteino.debug(DEBUG_FULL)){
-          Serial.println(F("btn rd net"));
-        }
-        moteino.rdRandom();
-        moteino.rdPairOn();
-      } else {//5s<push
-      }
-    } else if (series[2]==0){// two pushes : pairing
-      if(moteino.debug(DEBUG_FULL)){
-        Serial.println(F("btn pairon"));
-      }
-      moteino.rdPairOn();
-    }else if (series[3]==0){// three pushes : stop pairing
-      if(moteino.debug(DEBUG_FULL)){
-        Serial.println(F("btn pairoff"));
-      }
-      moteino.rdPairOff();
-    }
-  }
+  #ifdef MOTEINO_HAS_BTN
+    bc.loop();
+  #endif
 }

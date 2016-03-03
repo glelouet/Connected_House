@@ -1,7 +1,7 @@
-#include<Arduino.h>
-
 #ifndef MOTEINO_BTN_H
 #define MOTEINO_BTN_H
+
+#include<Arduino.h>
 
 #define BTN_MAX_PUSHES 7
 #define BTN_PUSH_GRAN 100
@@ -17,9 +17,6 @@
 class Button {
 
 public :
-
-	Button();
-	~Button();
 
 	void init(uint8_t btn_pin, unsigned long idle_delay);
 

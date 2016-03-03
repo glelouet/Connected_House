@@ -8,9 +8,6 @@ class SerialShell{
 
 public :
 
-SerialShell();
-~SerialShell();
-
 void init(Moteino *moteino);
 
 void loop();

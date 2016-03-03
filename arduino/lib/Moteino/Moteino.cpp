@@ -45,9 +45,9 @@ boolean Moteino::loadEEPROM(){
     if(debug(DEBUG_INFO)) Serial.println(F("acquiring parameters from EEPROM"));
     // To make sure there are settings, and they are YOURS!
     // If nothing is found it will use the default settings.
-    if (EEPROM.read(EEPROM_offset + 0) == VERSION[0]
-        && EEPROM.read(EEPROM_offset + 1) == VERSION[1]
-        && EEPROM.read(EEPROM_offset + 2) == VERSION[2]){
+    if (EEPROM.read(EEPROM_offset + 0) == MOTEINO_VERSION[0]
+        && EEPROM.read(EEPROM_offset + 1) == MOTEINO_VERSION[1]
+        && EEPROM.read(EEPROM_offset + 2) == MOTEINO_VERSION[2]){
       for (unsigned int t=0; t<sizeof(params); t++)
         *((char*)&params + t) = EEPROM.read(EEPROM_offset + t);
       if(debug(DEBUG_INFO)) Serial.println(F("EEPROM params loaded"));

@@ -19,7 +19,7 @@
 
 // version of the code is
 // abc where a, b, c in {0, 1..9, a..y, z}
-#define VERSION "004"
+#define MOTEINO_VERSION "004"
 
 //16 bytes for a crypt key
 #define RF69_CRYPT_SIZE 16
@@ -78,7 +78,7 @@ struct StoreStruct {
 	char rdKey[RF69_CRYPT_SIZE];
 	byte ethMac[ETH_MAC_SIZE];
 } params = {
-  VERSION,
+  MOTEINO_VERSION,
   // The default values
 	DEBUG_FULL,
 	false,false,
@@ -188,7 +188,7 @@ void init_RF69();
 //time at which we deactivate pairing
 unsigned long pairingEnd=0;
 
-char *RD_NET_DISCO="REQ"VERSION;
+char *RD_NET_DISCO="REQ"MOTEINO_VERSION;
 char *RD_LED_DISCO="DISCO";
 char *RD_IP_DISCO="ping";
 

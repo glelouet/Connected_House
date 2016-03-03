@@ -1,9 +1,5 @@
 #include <SerialShell.h>
 
-SerialShell::SerialShell(){}
-
-SerialShell::~SerialShell(){}
-
 void SerialShell::init(Moteino *moteino){
   m = moteino;
 }

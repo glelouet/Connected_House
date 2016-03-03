@@ -1,11 +1,5 @@
 #include <Button.h>
 
-Button::Button(){
-}
-
-Button::~Button(){
-}
-
 void Button::init(uint8_t btn_pin, unsigned long idle_delay){
   m_btn_pin=btn_pin;
   m_idle_delay=idle_delay;
