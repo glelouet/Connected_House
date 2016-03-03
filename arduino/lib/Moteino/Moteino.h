@@ -19,16 +19,13 @@
 
 // version of the code is
 // abc where a, b, c in {0, 1..9, a..y, z}
-#define VERSION "002"
+#define VERSION "003"
 
 //16 bytes for a crypt key
 #define RF69_CRYPT_SIZE 16
 
 //6 byts to make an ethernet adress
 #define ETH_MAC_SIZE 6
-
-// comment to remove serial shell support
-#define HANDLE_SERIAL_SHELL
 
 // debug levels
 #define DEBUG_NONE 0
@@ -52,14 +49,6 @@ boolean debug(int level);
 
 //serial speed
 int SERIAL_BAUD = 9600;
-
-#define SERIAL_BUFFER_SIZE 100
-// data retrieved from buffer are stored here
-char serial_buffer[SERIAL_BUFFER_SIZE+2];
-int serial_blength=0;
-//retrieve orders from serial
-void check_serial();
-void handleSerialMessage(char *message);
 
 //////////////////////////////////////////////////////////
 // storing in EEPROM
@@ -197,11 +186,11 @@ void init_RF69();
 unsigned long pairingEnd=0;
 
 char *RD_NET_DISCO="REQ"VERSION;
-
 char *RD_LED_DISCO="DISCO";
+char *RD_IP_DISCO="ping";
 
 // periodically send network request.
-boolean rdLoopScanNet();
+void rdLoopScanNet();
 
 //last IP we sent message to
 uint8_t radio_scan_ip=0;
@@ -209,9 +198,8 @@ bool radio_scan_ip_answered=false;
 unsigned long radio_last_ip_request;
 unsigned long radio_iprequest_delay=300; //300ms between each IP request
 
-//once the net word is known, request an id on this net
-//return true if
-boolean rdLoopScanIP();
+// find first IP not in use.
+void rdLoopScanIP();
 
 unsigned long radio_next_led=0;
 unsigned long radio_count_delay=3000;

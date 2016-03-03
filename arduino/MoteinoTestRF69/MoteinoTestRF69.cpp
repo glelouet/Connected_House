@@ -1,25 +1,26 @@
 #include <Moteino.h>
 #include <Button.h>
+#include <SerialShell.h>
 
 #define BTN_PIN 3
 
 Moteino moteino;
 Button btn;
+SerialShell sh;
 
 void setup()
 {
   moteino.setup();
   btn.init(BTN_PIN, 500);
+  sh.init(&moteino);
 }
 
 unsigned long last_send=0;
 unsigned long delay_ms=500;
 
-unsigned long last_chk_btn=0;
-unsigned long chk_btn_delay=500;
-
 void loop(){
   moteino.loop();
+  sh.loop();
   if(moteino.rdState()==RADIO_TRANSMIT && !moteino.rdPairing()) {
     if(millis()-last_send >delay_ms) {
       moteino.sendBCRF69("test");

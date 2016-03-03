@@ -36,115 +36,6 @@ boolean Moteino::debug(int lvl) {
   return params.debug>=lvl;
 }
 
-void Moteino::check_serial(){
-  while(Serial.available()>0) {
-    char cread = Serial.read();
-    serial_buffer[serial_blength++]=cread;
-    if(cread=='\n' || cread=='\r'){
-      Serial.println();
-      serial_buffer[serial_blength-1]='\0';
-      if(serial_blength>1) handleSerialMessage(serial_buffer);
-      serial_blength=0;
-    } else if(cread==127 || cread==8){//backspace or del
-      serial_blength-=2;
-      if(serial_blength<0) serial_blength=0;
-    } else {
-      Serial.print(cread);
-    }
-    if(serial_blength>=SERIAL_BUFFER_SIZE) {
-      serial_buffer[SERIAL_BUFFER_SIZE-1]='\0';
-      Serial.println(F("error : serial buffer overflow, discarding serial buffer :"));
-      Serial.println(serial_buffer);
-      serial_blength=0;
-    }
-  }
-}
-
-#ifdef  HANDLE_SERIAL_SHELL
-
-void Moteino::printParams(){
-  Serial.print(F("version="));Serial.println(params.version);
-  Serial.print(F("debug="));Serial.println(params.debug);
-  Serial.print(F("paired="));Serial.println(params.paired);
-  Serial.print(F("rdNet="));Serial.println(params.rdNet);
-  Serial.print(F("rdIP="));Serial.println(params.rdIP);
-  Serial.print(F("rdKey="));for(int i=0;i<RF69_CRYPT_SIZE;i++) {
-    Serial.print(params.rdKey[i], DEC);
-    Serial.print(' ');
-  } Serial.println();
-  Serial.print(F("ethMac="));for(int i=0;i<ETH_MAC_SIZE;i++) {
-    Serial.print(params.ethMac[i], DEC);
-    Serial.print(' ');
-  } Serial.println();
-}
-
-void Moteino::handleSerialMessage(char *message) {
-  if(strcmp(message, "rd")==0) {
-    Serial.print(F("rdnet="));
-    Serial.println(params.rdNet);
-    Serial.print(F("rdip="));
-    Serial.println(params.rdIP);
-  } else if(strncmp(message, "rdnet=", strlen("rdnet="))==0) {
-    uint8_t rdNet = atoi(message+strlen("rdnet="));
-    Serial.print(F("set rdnet "));
-    Serial.println(rdNet);
-    rdSetNet(rdNet);
-  } else if(strcmp(message, "rdSearchNet")==0) {
-    Serial.println(F("search rd net"));
-    rdSearchNet();
-  } else if(strncmp(message, "rdip=", strlen("rdip="))==0) {
-    uint8_t netIP = atoi(message+strlen("rdip="));
-    Serial.print(F("set rdip "));
-    Serial.println(netIP);
-    rdSetIP(netIP);
-  } else if(strcmp(message, "rdSearchIP")==0) {
-    Serial.println(F("acquiring radio IP"));
-    rdSearchIP();
-    radio_state=RADIO_GETIP;
-  } else if(strcmp(message, "rdran")==0) {
-    Serial.println(F("ran rd data"));
-    rdRandom();
-  } else if(strcmp(message, "write")==0) {
-    writeEEPROM();
-    Serial.println(F("wr2EEPROM ok"));
-  } else if(strcmp(message, "load")==0) {
-    loadEEPROM();
-    Serial.println(F("loadEEPROM"));
-    printParams();
-  } else if(strcmp(message, "params")==0) {
-    printParams();
-  } else if(strncmp(message, "dbg=", strlen("dbg="))==0) {
-    int debug = atoi(message+strlen("dbg="));
-    Serial.print(F("set dbg "));
-    Serial.println(debug);
-    params.debug=debug;
-  } else if(strcmp(message, "pairon")==0) {
-    rdPairOn();
-  } else if(strcmp(message, "pairoff")==0) {
-    rdPairOff();
-  } else if(strncmp(message, "blink ", strlen("blink "))==0) {
-    int time = atoi(message+strlen("blink "));
-    ledBlink(time);
-  } else if(strncmp(message, "flash ", strlen("flash "))==0) {
-    int time = atoi(message+strlen("flash "));
-    ledFlash(time);
-  } else {
-    Serial.print(F("discarding "));
-    Serial.println(message);
-  }
-}
-
-#else
-
-void Moteino::printParams(){}
-
-void Moteino::handleSerialMessage(char *message) {
-    Serial.print(F("serialOFF"));
-    Serial.println(message);
-}
-
-#endif
-
 void Moteino::init_EEPROM(){
   if(!loadEEPROM())
   writeEEPROM();
@@ -293,7 +184,7 @@ void Moteino::rdGetNet(){
   }
 }
 
-boolean Moteino::rdLoopScanNet(){
+void Moteino::rdLoopScanNet(){
   if (radio.receiveDone()
       && radio.DATALEN==3+1+RF69_CRYPT_SIZE
       && strncmp((char *)radio.DATA, "len", 3)==0 ) {
@@ -302,15 +193,22 @@ boolean Moteino::rdLoopScanNet(){
     for(int i=0;i<RF69_CRYPT_SIZE;i++) {
       params.rdKey[i]=radio.DATA[i+4];
     }
+    if(debug(DEBUG_INFO)){
+      Serial.print(F("acquired new net "));
+      Serial.print(params.rdNet);
+      for(int i=0;i<RF69_CRYPT_SIZE;i++) {
+        Serial.print(' ');
+        Serial.print(params.rdKey[i], DEC);
+      }
+      Serial.println();
+    }
     writeEEPROM();
     rdLedDisco();
     rdGetNet();
-    return true;
   } else if(millis()-last_scan>scan_net_delay) {
     last_scan=millis();
     sendBCRF69(RD_NET_DISCO);
   }
-  return false;
 }
 
 void Moteino::rdSearchIP(){
@@ -318,12 +216,8 @@ void Moteino::rdSearchIP(){
   params.rdIP=RF69_BROADCAST_ADDR;
   writeEEPROM();
   radio_state=RADIO_GETIP;
-  radio_scan_ip_answered=false;
-  radio_scan_ip=0;
-  radio_last_ip_request=millis();
-  Serial.print(F("scanning ip "));
-  Serial.println(radio_scan_ip);
-  sendRF69("PING", radio_scan_ip);
+  radio_scan_ip_answered=true;
+  radio_scan_ip=255;
 }
 
 void Moteino::rdSetIP(uint8_t ip){
@@ -347,7 +241,7 @@ void Moteino::rdGetIP() {
   }
 }
 
-boolean Moteino::rdLoopScanIP(){
+void Moteino::rdLoopScanIP(){
   if (radio.receiveDone()) {
     if(radio.SENDERID==radio_scan_ip) radio_scan_ip_answered=true;
   }
@@ -355,19 +249,21 @@ boolean Moteino::rdLoopScanIP(){
   if(radio_scan_ip_answered) {
       radio_scan_ip_answered=false;
       radio_scan_ip++;
+      if(radio_scan_ip==gw_RF69) radio_scan_ip++;
       radio_last_ip_request=time;
-      Serial.print(F("scanning ip "));
-      Serial.println(radio_scan_ip);
-      sendRF69("PING", radio_scan_ip);
-      return false;
-  }
-  if(time>radio_last_ip_request+radio_iprequest_delay){// we keep that IP
+      if(debug(DEBUG_FULL)) {
+        Serial.print(F("scanning ip "));
+        Serial.println(radio_scan_ip);
+      }
+      sendRF69(RD_IP_DISCO, radio_scan_ip);
+  } else if(time>radio_last_ip_request+radio_iprequest_delay){// we keep that IP
     radio.setAddress(radio_scan_ip);
-    params.rdIP=radio_scan_ip;
     radio_state = RADIO_TRANSMIT;
-    return true;
+    if(debug(DEBUG_INFO)) {
+      Serial.print("acquired IP ");
+      Serial.println(radio_scan_ip);
+    }
   }
-  return false;
 }
 
 void Moteino::rdPairOn(){
@@ -410,11 +306,11 @@ void Moteino::rdLoopTransmit(){
   if (radio.receiveDone()) {
     if (strcmp(RD_LED_DISCO, (char *)radio.DATA)==0){
       rdLedDisco();
-    } else
+    } else if (strcmp(RD_IP_DISCO, (char *)radio.DATA)==0){
+      sendBCRF69("pong");
+    }else
     // check if radio received rom to write on the flash, then flash it
       CheckForWirelessHEX(radio, flash, true);
-  } else {
-      //Serial.println(F("no data transmitted"));
   }
 }
 
@@ -574,7 +470,6 @@ void Moteino::check_led(){
 ////////////////////////////////////////////////////////
 
 void Moteino::loop() {
-  check_serial();
   check_RF69();
   check_led();
 }
