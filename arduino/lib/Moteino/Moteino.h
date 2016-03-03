@@ -19,7 +19,7 @@
 
 // version of the code is
 // abc where a, b, c in {0, 1..9, a..y, z}
-#define MOTEINO_VERSION "004"
+#define MOTEINO_VERSION "005"
 
 //16 bytes for a crypt key
 #define RF69_CRYPT_SIZE 16
@@ -206,7 +206,7 @@ void rdLoopScanIP();
 
 unsigned long radio_next_led=0;
 unsigned long radio_count_delay=3000;
-unsigned long radio_ledcount_duration=1000;
+unsigned long radio_ledcount_duration=1500;
 
 void rdLoopPairing();
 

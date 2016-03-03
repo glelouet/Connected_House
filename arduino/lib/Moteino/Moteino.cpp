@@ -149,7 +149,6 @@ void Moteino::rdRandom(){
   params.rdNet=random(255);
   for(int i=0;i<RF69_CRYPT_SIZE;i++)
    params.rdKey[i]=random(255);
-  params.rdIP=1;
   writeEEPROM();
   if(debug(DEBUG_INFO)){
     Serial.println(F("randomed network"));
@@ -320,10 +319,15 @@ void Moteino::rdLoopTransmit(){
     if (strcmp(RD_LED_DISCO, (char *)radio.DATA)==0){
       rdLedDisco();
     } else if (strcmp(RD_IP_DISCO, (char *)radio.DATA)==0){
+      Serial.println("pinging back");
       sendBCRF69("pong");
-    }else
-    // check if radio received rom to write on the flash, then flash it
+    }else {
+      Serial.print("received unknown data of size");
+      Serial.println(radio.DATALEN);
+      if(radio.DATALEN<=20) Serial.println((char *)radio.DATA);
+      // check if radio received rom to write on the flash, then flash it
       CheckForWirelessHEX(radio, flash, true);
+    }
   }
 }
 
@@ -367,7 +371,8 @@ void Moteino::check_RF69(){
 }
 
 void Moteino::radioLed(){
-  if(millis()>=radio_next_led){
+  unsigned long time = millis();
+  if(time>=radio_next_led){
     if(rdPairing()){
       if(led_state==LED_OFF)
         ledBlink(radio_ledcount_duration);
@@ -376,7 +381,7 @@ void Moteino::radioLed(){
       int period = 2*radio_ledcount_duration/(count*2);
       ledCount(count, period);
     }
-    radio_next_led=millis()+radio_count_delay+radio_ledcount_duration;
+    radio_next_led=time+radio_count_delay+radio_ledcount_duration;
   }
 }
 

@@ -40,17 +40,18 @@ void setup()
 }
 
 unsigned long last_send=0;
-unsigned long delay_ms=500;
+unsigned long delay_ms=5000;
 
 void loop(){
   moteino.loop();
   #ifdef MOTEINO_HAS_SERIAL
   sh.loop();
   #endif
-  if(moteino.rdState()==RADIO_TRANSMIT && !moteino.rdPairing()) {
-    if(millis()-last_send >delay_ms) {
+  unsigned long time = millis();
+  if(moteino.rdState()==RADIO_TRANSMIT ) {
+    if(time-last_send >delay_ms) {
       moteino.sendBCRF69("test");
-      last_send = millis();
+      last_send = time;
     }
   }
   #ifdef MOTEINO_HAS_BTN
