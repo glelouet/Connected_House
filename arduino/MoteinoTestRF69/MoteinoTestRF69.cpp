@@ -28,19 +28,21 @@ void loop(){
   }
   btn.check();
   if(btn.hasSeries()) {
-    Serial.print(F("received series : "));
     byte * series=btn.pop();
-    for(int i=0;series[i]!=0;i++) {Serial.print(series[i]);Serial.print(" ");}
-    Serial.println();
     if(series[1]==0){// one push
-      if(series[0]<=10) { // <=1s push : identify elements on the network
+      if(series[0]<=10) { // push<=1s : identify elements on the network
         moteino.rdIdLed();
-      }  else if(series[0]<=30){//<=3s push
-        moteino.rdSNet();
-      } else {//>3s push
+      }  else if(series[0]<=30){// 1s<push<=3s : acquire new net
+        moteino.rdSearchNet();
+      } else if(series[0]<=50){// 3s<push<=5s : random net and pairing
         moteino.rdRandom();
         moteino.rdPairOn();
+      } else {//5s<push
       }
+    } else if (series[2]==0){// two pushes : pairing
+      moteino.rdPairOn();
+    }else if (series[3]==0){// three pushes : stop pairing
+      moteino.rdPairOff();
     }
   }
 }
