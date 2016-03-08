@@ -6,7 +6,7 @@
 #include <Ethernet.h>
 #include <utility/w5100.h>
 
-
+#define ETH_DEBUG
 
 //6 byts to make an ethernet adress
 #define ETH_MAC_SIZE 6

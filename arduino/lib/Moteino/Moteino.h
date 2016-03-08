@@ -9,11 +9,14 @@
 #define ARDUINO_LIB_Moteino_Moteino_H_
 
 #include <Arduino.h>
-#include <RFM69_ATC.h> //get it here: https://www.github.com/lowpowerlab/rfm69
-#include <SPIFlash.h>  //get it here: https://www.github.com/lowpowerlab/spiflash
-#include <OneWire.h> // Inclusion de la librairie OneWire
-#include <EEPROM.h> //#include <avr/wdt.h>
-#include <WirelessHEX69.h> //get it here: https://github.com/LowPowerLab/WirelessProgramming/tree/master/WirelessHEX69
+#include <RFM69_ATC.h>
+#include <SPIFlash.h>
+#include <OneWire.h>
+#include <EEPROM.h>
+#include <WirelessHEX69.h>
+
+//request here to be able to lod the lib in the ethshield
+#include <Ethernet.h>
 
 // version of the code is
 // abc where a, b, c in {0, 1..9, a..y, z}
