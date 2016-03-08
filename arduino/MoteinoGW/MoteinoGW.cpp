@@ -249,15 +249,13 @@ void updateThingSpeak(char* tsData, char *chanel)
     //       if (DEBUG==1) Serial.print(c);
     //     }
     //  }
-    if (DEBUG==1) Serial.println("Fin Conex");
   }
   else Serial.println("PB!!! Conex");
 
 
  client.stop();
- if (DEBUG2==1) Serial.println(F("Client Stopped"));
 
-  Blink(LED,500);
+  moteino.ledBlink(500);
 
 //  radio.setMode(RF69_MODE_STANDBY);
 
@@ -266,44 +264,7 @@ void updateThingSpeak(char* tsData, char *chanel)
   digitalWrite(4, HIGH);
 
 
-  if (DEBUG==1) Serial.println(F("+++++++++++++++++  End updateThingSpeak +++++++++++++++++++++++"));
-
-
 }
-
-/*void loop_1(){
-   char MessageNode[100];
-   int sendSize=0;
-   char Temp[20];
-   uint8_t buf[RH_RF69_MAX_MESSAGE_LEN];
-
-    memset(Temp,'\0',20);
-    memset(buf,'\0',RH_RF69_MAX_MESSAGE_LEN);
-    uint8_t len = sizeof(buf);
-    memset(MessageNode,'\0',100);
-
-    delay(300);
-
-   if (rf69.recv(buf, &len)) {
-         Blink(LED,3);
-         MessageNode[99]='\0';
-         parseMessage((char*)buf,Temp,3);
-         /////////// BEGIN DEBUG
-         if (DEBUG==1) {
-            Serial.print("got request: ");
-            for (int t=0;((t<RH_RF69_MAX_MESSAGE_LEN)&(t<len));t++) {
-              Serial.print((char) buf[t]);
-            }
-            Serial.print("From");
-            Serial.print(Temp);
-            Serial.println();
-          }
-         /////////// END DEBUG
-         if (strcmp(Temp,"002")==0)    UpdateTeleIC((char*)buf);
-         if (strcmp(Temp,"003")==0)    UpdateTempInt((char*)buf);
-         if (strcmp(Temp,"004")==0)    UpdateMeteo((char*)buf);
-   }
-}*/
 
 void loop()
 {

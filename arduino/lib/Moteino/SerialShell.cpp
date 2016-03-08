@@ -39,11 +39,6 @@ void SerialShell::printParams(){
     Serial.print(' ');
     Serial.print((byte)m->netparams.rdKey[i]);
   } Serial.println();
-  Serial.print(F("ethMac="));
-  for(int i=0;i<ETH_MAC_SIZE;i++) {
-    Serial.print(' ');
-    Serial.print(m->netparams.ethMac[i]);
-  } Serial.println();
 }
 
 void SerialShell::handleSerialMessage(char *message) {

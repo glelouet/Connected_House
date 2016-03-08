@@ -44,7 +44,7 @@ void setup()
 }
 
 unsigned long last_send=0;
-unsigned long delay_ms=20000;
+unsigned long delay_ms=5000;
 
 void loop(){
   moteino.loop();

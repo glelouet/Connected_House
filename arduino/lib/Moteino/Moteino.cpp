@@ -6,7 +6,6 @@
  */
 
 #include <Moteino.h>
-#include <Arduino.h>
 
 Moteino::Moteino():
   owire(ONEWIRE_PIN),
@@ -24,10 +23,8 @@ void Moteino::setup(){
 
   // this order is important :
   // flash gives us its unique id so we can translate it to a *mac* address for the RF69
-  // if ethernet is present then we are a gateway, so our IP on the RF69 network is 0
   // we then initialize the RF69 using those parameters
   init_flash();
-  init_ethernet();
   init_RF69();
   if(rewrite_EEPROM) writeEEPROM();
 }
@@ -103,55 +100,16 @@ void Moteino::init_flash(){
     Serial.println(F("SPI Flash Init FAIL!"));
 }
 
-void Moteino::init_ethernet(){
-  hasEthernet=digitalRead(ETHERNET_PIN);
-  if(hasEthernet) {
-      ethc.stop();
-
-      delay(4000);
-      // Change the PIN used for the ethernet
-      Ethernet.select(ETHERNET_PIN);
-
-
-      // Connect to network amd obtain an IP address using DHCP
-      if (Ethernet.begin(netparams.ethMac) == 0)
-      {
-        if(debug(DEBUG_WARN)) Serial.println(F("DHCP Failed, reset Arduino to try again"));
-      }
-      else
-      {
-        if(debug(DEBUG_INFO)) Serial.println(F("Arduino connected to network using DHCP"));
-      }
-
-      if(debug(DEBUG_INFO)) {
-        Serial.print(F("My IP address: "));
-        for (byte thisByte = 0; thisByte < 4; thisByte++) {
-          // print the value of each byte of the IP address:
-          Serial.print(Ethernet.localIP()[thisByte], DEC);
-          Serial.print(F("."));
-        }
-        Serial.println();
-      }
-      W5100.setRetransmissionTime(0x07D0); //where each unit is 100us, so 0x07D0 (decimal 2000) means 200ms.
-      W5100.setRetransmissionCount(3); //That gives me a 3 second timeout on a bad server connection.
-
-      delay(100);
-  }
-}
-
 ///////////////////////////////////////////////////////////
 // RF69
 ///////////////////////////////////////////////////////////
 
 void Moteino::init_RF69(){
-  if(hasEthernet && params.rdIP!=gw_RF69 && debug(DEBUG_WARN)) {
-      Serial.println(F("warning : should discover IP but has ethernet chip so static IP"));
-  }
   //init with any net/IP then ask to get them
   radio.initialize(RF69_433MHZ,0,0);
   rdFindNet();
   #ifdef IS_RFM69HW //only for RFM69HW
-    radio.setHighPower();!
+    radio.setHighPower();
   #endif
   radio.enableAutoPower(-60);
 }
@@ -227,7 +185,7 @@ void Moteino::rdSearchIP(){
     writeEEPROM();
   }
   radio_state=RADIO_GETIP;
-  radio_scan_ip=RF69_BROADCAST_ADDR;
+  radio_ip=RF69_BROADCAST_ADDR;
   radio.setAddress(RF69_BROADCAST_ADDR);
   radio.promiscuous();
   radio.receiveDone();
@@ -235,45 +193,40 @@ void Moteino::rdSearchIP(){
 
 void Moteino::rdSetIP(uint8_t ip){
   params.rdIP=ip;
+  radio_ip=ip;
   radio.setAddress(ip);
   radio_state = RADIO_TRANSMIT;
   writeEEPROM();
 }
 
 void Moteino::rdFindIP() {
-  if(hasEthernet) {
-    radio.setAddress(gw_RF69);
-    radio_state = RADIO_TRANSMIT;
-  } else {
     if(params.rdIP!=RF69_BROADCAST_ADDR) {
-      radio.setAddress(params.rdIP);
+      radio_ip=params.rdIP;
+      radio.setAddress(radio_ip);
       radio_state = RADIO_TRANSMIT;
     } else {
       rdSearchIP();
     }
-  }
 }
 
 uint8_t Moteino::rdIp(){
-  if(hasEthernet) return gw_RF69;
-  if(params.rdIP!=RF69_BROADCAST_ADDR) return params.rdIP;
-  return radio_scan_ip;
+  return radio_ip;
 }
 
 void Moteino::rdLoopScanIP(){
-  ++radio_scan_ip;
-  if(radio_scan_ip==gw_RF69) radio_scan_ip++;
-  bool ack = rdSendSync(RD_IP_DISCO, radio_scan_ip);
+  ++radio_ip;
+  if(radio_ip==gw_RF69) radio_ip++;
+  bool ack = rdSendSync(RD_IP_DISCO, radio_ip);
   if(!ack) {
     //maybe we can get this IP. We may also be competing for this IP : wait random
     delay(random(1000));
-    if(rdSendSync(RD_IP_DISCO, radio_scan_ip)) return;
+    if(rdSendSync(RD_IP_DISCO, radio_ip)) return;
     radio.promiscuous(false);
-    radio.setAddress(radio_scan_ip);
+    radio.setAddress(radio_ip);
     radio_state = RADIO_TRANSMIT;
     if(debug(DEBUG_INFO)) {
       Serial.print(F("acquired IP "));
-      Serial.println(radio_scan_ip);
+      Serial.println(radio_ip);
     }
   }
 }
@@ -319,6 +272,14 @@ void Moteino::rdLoopPairing(){
 
 void Moteino::rdLoopTransmit(){
   if (radio.receiveDone()) {
+    if(radio.SENDERID==radio_ip){
+      // another station has same IP : get the IP again
+      if(debug(DEBUG_WARN)){
+        Serial.print(F("collision on IP"));
+        Serial.println(radio_ip);
+        rdFindIP();
+      }
+    }
     if (strcmp(RD_LED_DISCO, (char *)radio.DATA)==0){
       rdLedDisco();
     } else if (strcmp(RD_IP_DISCO, (char *)radio.DATA)==0){

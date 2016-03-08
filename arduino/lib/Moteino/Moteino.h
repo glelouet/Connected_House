@@ -14,8 +14,6 @@
 #include <OneWire.h> // Inclusion de la librairie OneWire
 #include <EEPROM.h> //#include <avr/wdt.h>
 #include <WirelessHEX69.h> //get it here: https://github.com/LowPowerLab/WirelessProgramming/tree/master/WirelessHEX69
-#include <Ethernet.h>
-#include <utility/w5100.h>
 
 // version of the code is
 // abc where a, b, c in {0, 1..9, a..y, z}
@@ -23,9 +21,6 @@
 
 //16 bytes for a crypt key
 #define RF69_CRYPT_SIZE 16
-
-//6 byts to make an ethernet adress
-#define ETH_MAC_SIZE 6
 
 // debug levels
 #define DEBUG_NONE 0
@@ -68,13 +63,11 @@ struct NetParamStruct{
 	uint8_t rdNet;
 	// rf69 crypt key
 	char rdKey[RF69_CRYPT_SIZE];
-	byte ethMac[ETH_MAC_SIZE];
 } netparams= {
 	0,
 	false,
 	100,
-	{0,0,0,0,0,0,0,0,0,0,0,0,0,MOTEINO_VERSION[0],MOTEINO_VERSION[1],MOTEINO_VERSION[2]},
-	{ 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED }
+	{0,0,0,0,0,0,0,0,0,0,0,0,0,MOTEINO_VERSION[0],MOTEINO_VERSION[1],MOTEINO_VERSION[2]}
 };
 
 // structure of internal parameters we store in the EEPROM
@@ -221,7 +214,7 @@ char *RD_IP_DISCO="ping";
 void rdLoopScanNet();
 
 //last IP we sent message to
-uint8_t radio_scan_ip=0;
+uint8_t radio_ip=0;
 
 // find first IP not in use.
 void rdLoopScanIP();
@@ -257,12 +250,6 @@ SPIFlash flash;
 uint32_t flashId = 1;
 //init the flash part
 void init_flash();
-
-boolean hasEthernet=false;
-byte ETHERNET_PIN=4;
-EthernetClient ethc;
-// initialize the ethernet client
-void init_ethernet();
 
 static char *ftoa(double f,char *a, int precision) {
  long p[] = {0,10,100,1000,10000,100000,1000000,10000000,100000000};
