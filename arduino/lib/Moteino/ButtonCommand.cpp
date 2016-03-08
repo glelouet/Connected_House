@@ -9,6 +9,11 @@ void ButtonCommand::loop() {
   b->check();
   if(b->hasSeries()) {
     byte * series=b->pop();
+//    Serial.print(F("acquired button series"));
+//    for(int i=0;series[i]!=0;i++) {
+//      Serial.print(' ');Serial.print(series[i], DEC);
+//    }
+//    Serial.println();
     if(series[1]==0){// one push
       if(series[0]<=5) { // push<=0.5s : identify elements on the network
         if(m->debug(DEBUG_FULL)){

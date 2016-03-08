@@ -25,6 +25,8 @@ ButtonCommand bc;
 SerialShell sh;
 #endif
 
+char buff[10];
+
 void setup()
 {
   moteino.setup();
@@ -37,10 +39,12 @@ void setup()
   #ifdef MOTEINO_HAS_SERIAL
   sh.init(&moteino);
   #endif
+  buff[0]='\0';
+  strcat(buff, "test ");
 }
 
 unsigned long last_send=0;
-unsigned long delay_ms=5000;
+unsigned long delay_ms=20000;
 
 void loop(){
   moteino.loop();
@@ -50,7 +54,8 @@ void loop(){
   unsigned long time = millis();
   if(moteino.rdState()==RADIO_TRANSMIT ) {
     if(time-last_send >delay_ms) {
-      moteino.sendBCRF69("test");
+      itoa(moteino.rdIp(), buff+4,10);
+      moteino.sendBCRF69(buff);
       last_send = time;
     }
   }

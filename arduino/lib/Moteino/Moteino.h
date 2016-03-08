@@ -57,35 +57,38 @@ int SERIAL_BAUD = 9600;
 // storing in EEPROM
 //////////////////////////////////////////////////////////
 
-// starting element in the EEPROM
-int EEPROM_offset = 32;
+//store network data that are kept between firmware updates.
+struct NetParamStruct{
+	//checksum
+	byte chk;
+	// set to true once network data has been retrieved
+	bool paired;
+	// rf69 network number, 0-254 . hardware filtering prevents trame from
+	// another network number from reaching this device
+	uint8_t rdNet;
+	// rf69 crypt key
+	char rdKey[RF69_CRYPT_SIZE];
+	byte ethMac[ETH_MAC_SIZE];
+} netparams= {
+	0,
+	false,
+	100,
+	{0,0,0,0,0,0,0,0,0,0,0,0,0,MOTEINO_VERSION[0],MOTEINO_VERSION[1],MOTEINO_VERSION[2]},
+	{ 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED }
+};
 
 // structure of internal parameters we store in the EEPROM
 struct StoreStruct {
   // This is for version detection
   char version[4];
 	byte debug;
-	// set to true once network data has been retrieved
-	bool paired;
-	// set to true to always start in pairing mode
-	bool pairing;
-	// rf69 network number, 0-254 . hardware filtering prevents trame from
-	// another network number from reaching this device
-	uint8_t rdNet;
 	// rf69 address to use when paired, if not set to RF69_BROADCAST_ADDR
 	uint8_t rdIP;
-	// rf69 crypt key
-	char rdKey[RF69_CRYPT_SIZE];
-	byte ethMac[ETH_MAC_SIZE];
 } params = {
   MOTEINO_VERSION,
   // The default values
 	DEBUG_FULL,
-	false,false,
-	100,
-	RF69_BROADCAST_ADDR,
-	{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
-	{ 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED }
+	RF69_BROADCAST_ADDR
 };
 
 // load params from EEPROM. return false if version mismatch
@@ -93,13 +96,30 @@ boolean loadEEPROM();
 // write present config in EEPROM
 void writeEEPROM();
 // start the EEPROM management (load data, store data if needed)
+
+private :
+
+size_t paramsOffset = sizeof(netparams);
+
 void init_EEPROM();
 // set to true to store data in EEPROM post setup()
 boolean rewrite_EEPROM = false;
 // write params to the serial
 void printParams();
 
+//check whether the chk field matches the netparams crc
+boolean chkNetEEPROM();
+
+//set the chk field in the netparams to the correct value
+void chkSetNet();
+
 //////////////////////////////////////////////////////////
+
+public :
+
+boolean getTemperatureDS18B20(float *temp);
+
+private :
 
 // 1-wire bus ( http://playground.arduino.cc/Learning/OneWire )
 byte ONEWIRE_PIN = 3;
@@ -109,8 +129,6 @@ OneWire owire;
 // DS12B30 = temperature probe
 byte DS18B20_PIN = 0x28;
 
-boolean getTemperatureDS18B20(float *temp);
-
 
 //////////////////////////////////////////////////////////
 // RF69 (wireless radio) chip
@@ -118,14 +136,18 @@ boolean getTemperatureDS18B20(float *temp);
 
 public :
 
-//select a random network, a random crypt key, and connect itself.
+//connect to a random network, with a random crypt key.
 void rdRandom();
 
 // return the present connection state of the radio : idle, search netowrk, set ip, transmit
 int rdState();
 
 // send data to a RF69 station if exists and connected
-void sendRF69(char *data, byte targetId);
+// as this waits for an ACK, returns true if the ACK was received before timeout
+bool rdSendSync(char *data, byte targetId);
+
+//send data to a RF69 station, whether it exists or not. does not request ACK
+void rdSendAsync(char *data, byte targetId, bool ack=false);
 
 // send data to the broadcast on same network WORD
 void sendBCRF69(char *data);
@@ -137,7 +159,7 @@ void rdSearchNet();
 void rdSetNet(uint8_t net);
 
 // find the net to use
-void rdGetNet();
+void rdFindNet();
 
 // search radio ip
 void rdSearchIP();
@@ -146,7 +168,10 @@ void rdSearchIP();
 void rdSetIP(uint8_t ip);
 
 // find the IP to use
-void rdGetIP();
+void rdFindIP();
+
+//return the used IP.
+uint8_t rdIp();
 
 bool rdPairing();
 
@@ -197,9 +222,6 @@ void rdLoopScanNet();
 
 //last IP we sent message to
 uint8_t radio_scan_ip=0;
-bool radio_scan_ip_answered=false;
-unsigned long radio_last_ip_request;
-unsigned long radio_iprequest_delay=300; //300ms between each IP request
 
 // find first IP not in use.
 void rdLoopScanIP();

@@ -31,18 +31,18 @@ void SerialShell::loop(){
 void SerialShell::printParams(){
   Serial.print(F("version="));Serial.println(m->params.version);
   Serial.print(F("debug="));Serial.println(m->params.debug);
-  Serial.print(F("paired="));Serial.println(m->params.paired);
-  Serial.print(F("rdNet="));Serial.println(m->params.rdNet);
+  Serial.print(F("paired="));Serial.println(m->netparams.paired);
+  Serial.print(F("rdNet="));Serial.println(m->netparams.rdNet);
   Serial.print(F("rdIP="));Serial.println(m->params.rdIP);
   Serial.print(F("rdKey="));
   for(int i=0;i<RF69_CRYPT_SIZE;i++) {
     Serial.print(' ');
-    Serial.print((byte)m->params.rdKey[i]);
+    Serial.print((byte)m->netparams.rdKey[i]);
   } Serial.println();
   Serial.print(F("ethMac="));
   for(int i=0;i<ETH_MAC_SIZE;i++) {
     Serial.print(' ');
-    Serial.print(m->params.ethMac[i]);
+    Serial.print(m->netparams.ethMac[i]);
   } Serial.println();
 }
 
@@ -52,7 +52,7 @@ void SerialShell::handleSerialMessage(char *message) {
     Serial.print(F("set rdnet "));
     Serial.println(rdNet);
     m->rdSetNet(rdNet);
-  } else if(strcmp(message, "rdSearchNet")==0) {
+  } else if(strcmp(message, "rdsnet")==0) {
     Serial.println(F("search rd net"));
     m->rdSearchNet();
   } else if(strncmp(message, "rdip=", strlen("rdip="))==0) {
@@ -60,7 +60,7 @@ void SerialShell::handleSerialMessage(char *message) {
     Serial.print(F("set rdip "));
     Serial.println(netIP);
     m->rdSetIP(netIP);
-  } else if(strcmp(message, "rdSearchIP")==0) {
+  } else if(strcmp(message, "rdsip")==0) {
     Serial.println(F("acquiring radio IP"));
     m->rdSearchIP();
   } else if(strcmp(message, "rdran")==0) {
