@@ -132,6 +132,12 @@ byte DS18B20_PIN = 0x28;
 
 public :
 
+// return true if last loop() retrieved a char * from the rf69
+bool rdRcv();
+
+// wireless radio
+RFM69_ATC radio;
+
 //connect to a random network, with a random crypt key.
 void rdRandom();
 
@@ -185,16 +191,17 @@ void rdIdLed();
 
 private :
 
+bool m_rdRcv = false;
+
 //default gateway address
 byte gw_RF69=0;
-// wireless radio
-RFM69_ATC radio;
 
 #define RADIO_IDLE 0
 #define RADIO_GETNET 1
 #define RADIO_GETIP 2
 #define RADIO_TRANSMIT 3
 #define RADIO_PAIRING 4
+
 int radio_state=RADIO_IDLE;
 
 #define RADIO_SCANNET 255

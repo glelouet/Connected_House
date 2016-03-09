@@ -51,7 +51,7 @@ void Moteino::init_EEPROM(){
   writeEEPROM();
 }
 
-// xor the values of params and store the resulting byte in the first field
+// xor the values of netparams and store the resulting byte in the first field
 void Moteino::chkSetNet(){
   netparams.chk=0;
   for(int i=1;i<sizeof(netparams);i++) {
@@ -86,6 +86,8 @@ void Moteino::writeEEPROM() {
     EEPROM.update(t, *((char*)&netparams + t));
   for (unsigned int t=0; t<sizeof(params); t++)
     EEPROM.update(paramsOffset + t, *((char*)&params + t));
+  if(debug(DEBUG_INFO))
+    Serial.println(F("EEPROM write OK"));
 }
 
 void Moteino::init_flash(){
@@ -277,22 +279,16 @@ void Moteino::rdLoopTransmit(){
       if(debug(DEBUG_WARN)){
         Serial.print(F("collision on IP"));
         Serial.println(radio_ip);
-        rdFindIP();
       }
+      rdFindIP();
+      return;
     }
+    m_rdRcv = true;
     if (strcmp(RD_LED_DISCO, (char *)radio.DATA)==0){
       rdLedDisco();
     } else if (strcmp(RD_IP_DISCO, (char *)radio.DATA)==0){
       radio.sendACK();
     }else {
-      if(radio.DATALEN<=50) {
-        Serial.print("[");
-        Serial.print(radio.SENDERID);
-        Serial.print("->");
-        Serial.print(radio.TARGETID);
-        Serial.print(F("]>"));
-        Serial.println((char *)radio.DATA);
-      }
       // check if radio received rom to write on the flash, then flash it
       CheckForWirelessHEX(radio, flash, true);
     }
@@ -321,6 +317,7 @@ void Moteino::sendBCRF69(char *data){
 }
 
 void Moteino::check_RF69(){
+  m_rdRcv=false;
   switch (radio_state) {
     case RADIO_GETNET :
       rdLoopScanNet();
@@ -337,6 +334,11 @@ void Moteino::check_RF69(){
   }
   radioLed();
 }
+
+bool Moteino::rdRcv(){
+  return m_rdRcv;
+}
+
 
 void Moteino::radioLed(){
   unsigned long time = millis();

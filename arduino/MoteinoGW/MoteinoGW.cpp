@@ -11,18 +11,22 @@
 // Tested on miniWireless with RFM69 www.anarduino.com/miniwireless
 // Tested on Teensy 3.1 with RF69 on PJRC breakout board
 
+#include <Moteino.h>
+#include <Button.h>
+#include <ButtonCommand.h>
+#include <SerialShell.h>
+#include <EthShield.h>
+
+//comment to prevent adding the SerialShell
+#define MOTEINO_HAS_SERIAL
 #define DEBUG 1
 #define DEBUG2 1
+
 #define REPLY 1
 #define ENABLE_IDLE_STBY_RF 0
+#define BTN_PIN 3
 
 #define MAX_JSON 100
-
-// Cons to update the modules
-#define VERSION_MODULE_TEMP 1 // Version number of the emp module
-#define NUMBER_OF_MODULES 1 // Number of different modules existing (1 here, the temperature module)
-
-#include <Moteino.h>
 
 char writeAPIKeyElec[] = "c33f1ab16fc77cb03b0fdc7ad11a5735";
 char writeAPIKeyMeteo[] = "OD8OB7F3CWE25CLE";
@@ -30,38 +34,75 @@ char thingSpeakAddress[] = "kgb.emn.fr";
 int server_port = 8001;
 
 Moteino moteino;
+Button btn;
+ButtonCommand bc;
+#ifdef MOTEINO_HAS_SERIAL
+SerialShell sh;
+#endif
 
+char conf[35] = "{\"type\":\"Base\",\"V\":\"1\",\"id\":15}";
+long int temp = 2000*30;
+char buf[20];
+char json[MAX_JSON];
 
-void setup()
-{
+void parseMessage(char *Message, char * Response, int value);
+void UpdateTeleIC(char *Data);
+void UpdateTempInt(char *Data);
+void UpdateMeteo(char *Data);
+void updateThingSpeak(char* tsData, char *chanel);
+
+void setup() {
   moteino.setup();
+  btn.init(BTN_PIN, 500);
+  bc.init(&btn, &moteino);
+  #ifdef MOTEINO_HAS_SERIAL
+    sh.init(&moteino);
+  #endif
+
+  json[0]='\0';
+}
+
+void loop() {
+  moteino.loop();
+  bc.loop();
+  #ifdef MOTEINO_HAS_SERIAL
+   sh.loop();
+  #endif
+
+  if (moteino.rdRcv()) {
+    if (moteino.radio.ACKRequested()) {
+      moteino.radio.sendACK();
+    }
+    Serial.println();
+
+    buf[0]='\0';
+    parseMessage((char *)moteino.radio.DATA,buf,2);
+
+    if (strcmp(buf,"001")==0)    UpdateTeleIC(json);
+    if (strcmp(buf,"2")==0)    UpdateTempInt(json);
+    if (strcmp(buf,"003")==0)    UpdateMeteo(json);
+
+  }
 }
 
 
-// Parse the message into the response according to the value which gives the value-th element
-void parseMessage(char *Message, char * Response, int value) {
-  int cpt = 0;
+// extract the tokenNb-th token from Message into response, where tokens are separated by ';', first token is 1
+void parseMessage(char *Message, char * Response, int tokenNb) {
  // Serial.println(Message);
-
-  for (int i=0; (i<100) & (i<(strlen(Message) ) ); ) {
-    // We look for the right element to take into the message
-    if (cpt==value) {
-      for (int j=0; (Message[i]!=';' & (i<100) & (i<(strlen(Message) ) ) ); ) {
-     //  Serial.print(cpt);Serial.print('-');Serial.print(i);Serial.print('-');Serial.print(j);
-
-        Response[j] = Message[i];
-        j++;
-        i++;
+  int char_idx=0;
+  for(;char_idx<MAX_JSON && Message[char_idx]!='\0' && tokenNb>1;char_idx++) {
+    if (Message[char_idx] == ';') {
+      tokenNb--;
+    }
+  }
+  if(tokenNb==1){
+    for(int cp_idx=char_idx; cp_idx<MAX_JSON && Message[cp_idx]!='\0'; cp_idx++){
+      if(Message[cp_idx]==';') {
+        Response[cp_idx-char_idx] ='\0';
+        return;
       }
-      return ;
+      Response[cp_idx-char_idx] = Message[cp_idx];
     }
-
-    // If we move to the next element, we increment the cpt
-    if (Message[i] == ';') {
-      cpt++;
-    }
-    i++;
-
   }
 }
 
@@ -107,18 +148,12 @@ void UpdateTempInt(char *Data){
 
   memset(MessageServeur,'\0',100);
 
-   if (DEBUG==1) { Serial.print("   [RX_RSSI:");Serial.print(radio.RSSI);Serial.print("]"); }
-   if (DEBUG==1) Serial.println();
+  memset(TempInt,'\0',20);
+  parseMessage(Data,TempInt,5);
 
-    memset(TempInt,'\0',20);
-    parseMessage(Data,TempInt,5);
-    if (DEBUG==1) Serial.print("TempInt :");
-    if (DEBUG==1) Serial.println(TempInt);
+  sprintf(MessageServeur,"field1=%s",TempInt);
 
-
-    sprintf(MessageServeur,"field1=%s",TempInt);
-
-    updateThingSpeak(MessageServeur,writeAPIKeyElec);
+  updateThingSpeak(MessageServeur,writeAPIKeyElec);
 
 }
 
@@ -180,26 +215,12 @@ void UpdateMeteo(char *Data){
       sprintf(MessageServeur,"field1=%s&field2=%s&field3=%s&field4=%s&field5=%s&field8=%s",BPV,TV,HV,RV,Light,WS);
 
     if (DEBUG==1) Serial.println(MessageServeur);
-
-//   if (DEBUG==1) { Serial.print("   [RX_RSSI:");Serial.print(radio.RSSI);Serial.print("]"); }
-//   if (DEBUG==1) Serial.println();
-//
-//    memset(TempInt,'\0',20);
-//    parseMessage(Data,TempInt,2);
-//    Serial.print("TempInt :");
-//    Serial.println(TempInt);
-//
-//
-//    sprintf(MessageServeur,"field1=%s",TempInt);
-//
     updateThingSpeak(MessageServeur,writeAPIKeyMeteo);
 
 }
 
 // Update ThingSpeak with the date on the right chanel
-void updateThingSpeak(char* tsData, char *chanel)
-{
-
+void updateThingSpeak(char* tsData, char *chanel) {
 
   if (DEBUG2 == 1 ) {
     Serial.println(F("+++++++++++++++++  updateThingSpeak +++++++++++++++++++++++"));
@@ -265,120 +286,3 @@ void updateThingSpeak(char* tsData, char *chanel)
 
 
 }
-
-void loop()
-{
-  // Setup of the ID
-  #ifdef SETUPEEPROM
-    EEPROM.write(ADDRID, IDTOSETUP);
-    EEPROM.write(ADDRNODEID, NODEIDTOSETUP);
-    EEPROM.write(ADDRNETWORKID, NETWORKIDTOSETUP);
-    ID = EEPROM.read(ADDRID);
-    NODEID = EEPROM.read(ADDRNODEID);
-    NETWORKID = EEPROM.read(ADDRNETWORKID);
-  #else
-    ID = EEPROM.read(ADDRID);
-    NODEID = EEPROM.read(ADDRNODEID);
-    NETWORKID = EEPROM.read(ADDRNETWORKID);
-  #endif
-
-   /*char MessageNode[100];
-   int sendSize=0;
-   char Temp[20];
-   uint8_t buf[RH_RF69_MAX_MESSAGE_LEN];*/
-
-  char json[MAX_JSON];
-  char conf[35] = "{\"type\":\"Base\",\"V\":\"1\",\"id\":15}";
-  long int temp = 2000*30;
-  char buf[20];
-
-//   while (radio.receiveDone()) {
-//  Serial.println(radio.receiveDone());
-//  }
-  if (radio.receiveDone())
-  {
-    if (DEBUG==1) {
-      Serial.println("Message Receive");
-      Serial.print('[');Serial.print(radio.SENDERID, DEC);Serial.print("] ");
-    }
-
-
-
-    memset(json,'\0',MAX_JSON);
-
-    for (byte i = 0; ((i < radio.DATALEN) & (i < MAX_JSON)); i++)
-      json[i] = (char)radio.DATA[i];
-
-   // radio.recv( json, len );
-
-   if (DEBUG==1) {
-     Serial.print('[');Serial.print( json );Serial.print(']');Serial.println(radio.DATALEN);
-   }
-
-
-
-    if (radio.ACKRequested())
-    {
-      byte theNodeID = radio.SENDERID;
-      radio.sendACK();
-     if (DEBUG==1) Serial.print(" - ACK sent.");
-
-      // When a node requests an ACK, respond to the ACK
-      // and also send a packet requesting an ACK (every 3rd one only)
-      // This way both TX/RX NODE functions are tested on 1 end at the GATEWAY
-
-    }
-    Serial.println();
-
-  /*delay(3000);
-  // Serial.println("Loop");
-  if (rf69.available())
-  {
-    // Should be a message for us now
-    memset(buf,'\0',RH_RF69_MAX_MESSAGE_LEN);
-    uint8_t len = sizeof(buf);
-    if (rf69.recv(buf, &len))
-    {
-      RH_RF69::printBuffer("request: ", buf, len);
-  if (DEBUG==1) {
-      Serial.print("got request: ");
-      for (int t=0;((t<RH_RF69_MAX_MESSAGE_LEN)&(t<len));t++) {
-          Serial.print((char) buf[t]);
-      }
-      Serial.println();
-  }
-      //Serial.println((char*)buf);
-//      Serial.print("RSSI: ");
-//      Serial.println(rf69.lastRssi(), DEC);
-
-    memset(MessageNode,'\0',100);
-    memset(Temp,'\0',20);
-    if (REPLY==1) {
-      parseMessage((char*)buf,Temp,2);
-      sprintf(MessageNode,"%s;%s;%s;ACK;",NETWORKID,Temp,GATEWAY);
-      sendSize = strlen(MessageNode);
-      if (DEBUG==1) Serial.println(MessageNode);
-      if (DEBUG==1) Serial.println(sendSize);
-
-      // Send a reply
-        if (REPLY==1) rf69.send((uint8_t*)MessageNode, sendSize);
-       // if (REPLY==1) rf69.waitPacketSent();
-        if ((DEBUG==1)&&(REPLY==1)) Serial.println("Sent a Ack");
-    }
-    Blink(LED,3);
-      */
-    memset(buf,'\0',20);
-    parseMessage(json,buf,2);
-    if (DEBUG==1) Serial.print("PROBE :");
-    if (DEBUG==1) Serial.println(buf);
-
-    if (strcmp(buf,"001")==0)    UpdateTeleIC(json);
-    if (strcmp(buf,"2")==0)    UpdateTempInt(json);
-    if (strcmp(buf,"003")==0)    UpdateMeteo(json);
-
-    }
-    else
-    {
-      //Serial.println("recv failed");
-    }
-  }

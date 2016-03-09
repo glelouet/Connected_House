@@ -26,6 +26,14 @@ void SerialShell::loop(){
       serial_blength=0;
     }
   }
+  if(m->rdRcv()){
+    Serial.print(F("["));
+    Serial.print(m->radio.SENDERID);
+    Serial.print(F("->"));
+    Serial.print(m->radio.TARGETID);
+    Serial.print(F("]>"));
+    Serial.println((char *)m->radio.DATA);
+  }
 }
 
 void SerialShell::printParams(){
