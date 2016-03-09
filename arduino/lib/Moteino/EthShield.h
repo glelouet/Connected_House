@@ -12,19 +12,24 @@
 #define ETH_MAC_SIZE 6
 
 class EthShield {
+
+
 public :
 
 void init();
 
 void loop();
 
+EthernetClient client;
+
+
 private:
 
 byte ethMac[ETH_MAC_SIZE] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
 
 boolean hasEthernet=false;
+
 byte ETHERNET_PIN=4;
-EthernetClient ethc;
 
 };
 

@@ -3,7 +3,7 @@
 void EthShield::init(){
   hasEthernet=digitalRead(ETHERNET_PIN);
   if(hasEthernet) {
-      ethc.stop();
+      client.stop();
       Ethernet.select(ETHERNET_PIN);
       Ethernet.begin(ethMac);
 

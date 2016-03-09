@@ -36,6 +36,7 @@ int server_port = 8001;
 Moteino moteino;
 Button btn;
 ButtonCommand bc;
+EthShield eth;
 #ifdef MOTEINO_HAS_SERIAL
 SerialShell sh;
 #endif
@@ -55,6 +56,7 @@ void setup() {
   moteino.setup();
   btn.init(BTN_PIN, 500);
   bc.init(&btn, &moteino);
+  eth.init();
   #ifdef MOTEINO_HAS_SERIAL
     sh.init(&moteino);
   #endif
@@ -78,9 +80,9 @@ void loop() {
     buf[0]='\0';
     parseMessage((char *)moteino.radio.DATA,buf,2);
 
-    if (strcmp(buf,"001")==0)    UpdateTeleIC(json);
-    if (strcmp(buf,"2")==0)    UpdateTempInt(json);
-    if (strcmp(buf,"003")==0)    UpdateMeteo(json);
+    if (strcmp(buf,"001")==0)    UpdateTeleIC((char *)moteino.radio.DATA);
+    if (strcmp(buf,"2")==0)    UpdateTempInt((char *)moteino.radio.DATA);
+    if (strcmp(buf,"003")==0)    UpdateMeteo((char *)moteino.radio.DATA);
 
   }
 }
@@ -161,126 +163,60 @@ void UpdateTempInt(char *Data){
 void UpdateMeteo(char *Data){
 
   char MessageServeur[100]="";
-   if (DEBUG==1) Serial.print("Meteo :");
-   if (DEBUG==1) Serial.println(Data);
-   char Light[20];
-   char BPV[20];
-   char TV[20];
-   char HV[20];
-   char WD[20];
-   char WS[20];
-   char RV[20];
+  if (DEBUG==1) Serial.print("Meteo :");
+  if (DEBUG==1) Serial.println(Data);
+  char Light[20];
+  char BPV[20];
+  char TV[20];
+  char HV[20];
+  char WD[20];
+  char WS[20];
+  char RV[20];
 
-   memset(Light,'\0',20);
-   memset(BPV,'\0',20);
-   memset(TV,'\0',20);
-   memset(HV,'\0',20);
-   memset(WD,'\0',20);
-   memset(WS,'\0',20);
-   memset(RV,'\0',20);
+  parseMessage(Data,Light,5);
+  parseMessage(Data,BPV,6);
+  parseMessage(Data,TV,7);
+  parseMessage(Data,HV,8);
+  parseMessage(Data,WD,9);
+  parseMessage(Data,WS,10);
+  parseMessage(Data,RV,11);
 
-  memset(MessageServeur,'\0',100);
+  if (atoi(WD)>-1)
+    sprintf(MessageServeur,"field1=%s&field2=%s&field3=%s&field4=%s&field5=%s&field7=%s&field8=%s",BPV,TV,HV,RV,Light,WD,WS);
+  else
+    sprintf(MessageServeur,"field1=%s&field2=%s&field3=%s&field4=%s&field5=%s&field8=%s",BPV,TV,HV,RV,Light,WS);
 
-    parseMessage(Data,Light,5);
-    if (DEBUG==1) Serial.print("Light :");
-    if (DEBUG==1) Serial.println(Light);
-
-    parseMessage(Data,BPV,6);
-    if (DEBUG==1) Serial.print("BPV :");
-    if (DEBUG==1) Serial.println(BPV);
-
-    parseMessage(Data,TV,7);
-    if (DEBUG==1) Serial.print("TV :");
-    if (DEBUG==1) Serial.println(TV);
-
-    parseMessage(Data,HV,8);
-    if (DEBUG==1) Serial.print("HV :");
-    if (DEBUG==1) Serial.println(HV);
-
-     parseMessage(Data,WD,9);
-    if (DEBUG==1) Serial.print("WD :");
-    if (DEBUG==1) Serial.println(WD);
-
-     parseMessage(Data,WS,10);
-    if (DEBUG==1) Serial.print("WS :");
-    if (DEBUG==1) Serial.println(WS);
-
-    parseMessage(Data,RV,11);
-    if (DEBUG==1) Serial.print("RV :");
-    if (DEBUG==1) Serial.println(RV);
-
-    if (atoi(WD)>-1)
-      sprintf(MessageServeur,"field1=%s&field2=%s&field3=%s&field4=%s&field5=%s&field7=%s&field8=%s",BPV,TV,HV,RV,Light,WD,WS);
-    else
-      sprintf(MessageServeur,"field1=%s&field2=%s&field3=%s&field4=%s&field5=%s&field8=%s",BPV,TV,HV,RV,Light,WS);
-
-    if (DEBUG==1) Serial.println(MessageServeur);
+  if (DEBUG==1) Serial.println(MessageServeur);
     updateThingSpeak(MessageServeur,writeAPIKeyMeteo);
 
 }
 
 // Update ThingSpeak with the date on the right chanel
 void updateThingSpeak(char* tsData, char *chanel) {
-
-  if (DEBUG2 == 1 ) {
-    Serial.println(F("+++++++++++++++++  updateThingSpeak +++++++++++++++++++++++"));
-    Serial.print("Le message: ");
-    Serial.print(tsData);
-    Serial.print(" Sa taille: ");
-    Serial.println(strlen(tsData));
-    delay(100);
-  }
-
-
-  //if (ENABLE_IDLE_STBY_RF==1)
-  noInterrupts();
-  radio.sleep();
-
-  // Connecting to the server
-  byte server[] = { 193, 54, 76, 34 }; // kgb.emn.fr
-  delay(1000);
-  //Serial.println(client.connect("kgb.emn.fr", 8001));
-  int connectInt = client.connect("kgb.emn.fr", 8001);
-
-  if (connectInt)
-  {
-    if (DEBUG==1) Serial.print("Conex");
+  if (eth.client.connect("kgb.emn.fr", 8001)) {
     // Sending the data with a POST method
-    client.print(F("POST /update HTTP/1.1\n"));
-    client.print(F("Host: api.thingspeak.com\n"));
+    eth.client.println(F("POST /update HTTP/1.1"));
+    eth.client.print(F("Host: api.thingspeak.com\n"));
 //    client.print(F("Host: kgb.emn.fr\n"));
-    client.print(F("Connection: close\n"));
-    client.print(F("X-THINGSPEAKAPIKEY: "));
-    client.print(chanel);
-    client.print(F("\n"));
-    client.print(F("Content-Type: application/x-www-form-urlencoded\n"));
-    client.print(F("Content-Length: "));
-    client.print(strlen(tsData));
-    client.print("\n\n");
-    client.print(tsData);
-    client.print("\n\n");
+    eth.client.print(F("Connection: close\n"));
+    eth.client.print(F("X-THINGSPEAKAPIKEY: "));
+    eth.client.print(chanel);
+    eth.client.print(F("\n"));
+    eth.client.print(F("Content-Type: application/x-www-form-urlencoded\n"));
+    eth.client.print(F("Content-Length: "));
+    eth.client.print(strlen(tsData));
+    eth.client.print("\n\n");
+    eth.client.print(tsData);
+    eth.client.print("\n\n");
 
-   // lastConnectionTime = millis();
-
-   client.flush();
-
-    //  while (client.connected()) {
-    //     if (client.available()) {
-    //       char c = client.read();
-    //       if (DEBUG==1) Serial.print(c);
-    //     }
-    //  }
+    eth.client.flush();
   }
   else Serial.println("PB!!! Conex");
 
-
- client.stop();
+  eth.client.stop();
 
   moteino.ledBlink(500);
 
-//  radio.setMode(RF69_MODE_STANDBY);
-
-  interrupts();
 
   digitalWrite(4, HIGH);
 
