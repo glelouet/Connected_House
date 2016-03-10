@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <RFM69_ATC.h>
+#include <Params.h>
 
 class RF69Manager{
 
@@ -21,12 +22,13 @@ public :
 
 private :
 
-  State state=idle;
+  State m_state=idle;
+  NetParams *m_params;
 
 
 public :
 
-  void init();
+  void init(NetParams * params);
   void loop();
 
   // send data to a RF69 station if exists and connected
@@ -41,6 +43,9 @@ public :
 
   // return true if last loop() retrieved a char * from the rf69
   bool hasRcv();
+
+  //return true if lat loop() changed the state
+  bool hasChanged();
 
 
   //set radio network
@@ -72,7 +77,11 @@ private :
   // wireless radio
   RFM69_ATC radio;
 
-  bool m_rdRcv = false;
+  // true when data has been received after a lopp()
+  bool m_rcv = false;
+
+  //true when params where changed in a loop()
+  bool m_changed = false;
 
   //scan net
   unsigned long last_scan=0;
@@ -87,9 +96,9 @@ private :
 
   // periodically send network request.
   void loopScanNet();
-
-  //last IP we sent message to
-  uint8_t lastIP=0;
+  
+  // IP we try to get or alraedy got
+  uint8_t m_IP=0;
 
   // find first IP not in use.
   void loopScanIP();

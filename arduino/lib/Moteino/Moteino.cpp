@@ -25,8 +25,7 @@ void Moteino::setup(){
   // flash gives us its unique id so we can translate it to a *mac* address for the RF69
   // we then initialize the RF69 using those parameters
   init_flash();
-  init_RF69();
-  if(rewrite_EEPROM) writeEEPROM();
+  radio.init(&netParams);
 }
 
 boolean Moteino::debug(int lvl) {

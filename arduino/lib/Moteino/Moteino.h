@@ -12,6 +12,7 @@
 #include <SPIFlash.h>
 #include <OneWire.h>
 #include <EEPROM.h>
+#include <Params.h>
 
 //request here to be able to load the libs in other classes
 #include <RFM69_ATC.h>
@@ -57,17 +58,7 @@ int SERIAL_BAUD = 9600;
 //////////////////////////////////////////////////////////
 
 //store network data that are kept between firmware updates.
-struct NetParamStruct{
-	//checksum
-	byte chk;
-	// set to true once network data has been retrieved
-	bool paired;
-	// rf69 network number, 0-254 . hardware filtering prevents trame from
-	// another network number from reaching this device
-	uint8_t rdNet;
-	// rf69 crypt key
-	char rdKey[RF69_CRYPT_SIZE];
-} netparams= {
+NetParams netparams= {
 	0,
 	false,
 	100,
@@ -75,13 +66,7 @@ struct NetParamStruct{
 };
 
 // structure of internal parameters we store in the EEPROM
-struct StoreStruct {
-  // This is for version detection
-  char version[4];
-	byte debug;
-	// rf69 address to use when paired, if not set to RF69_BROADCAST_ADDR
-	uint8_t rdIP;
-} params = {
+Params params = {
   MOTEINO_VERSION,
   // The default values
 	DEBUG_FULL,

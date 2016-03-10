@@ -4,9 +4,10 @@ State RF69Manager::getState(){
   return state;
 }
 
-void RF69Manager::init(){
+void RF69Manager::init(NetParams * params){
+  m_params = params;
   //init with any net/IP then ask to get them
-  radio.initialize(RF69_433MHZ,0,0);
+  radio.initialize(RF69_433MHZ);
   #ifdef IS_RFM69HW //only for RFM69HW
     radio.setHighPower();
   #endif
@@ -15,6 +16,7 @@ void RF69Manager::init(){
 
 void RF69Manager::loop(){
   m_rdRcv=false;
+  m_changed=false;
   switch (state) {
     case GETNET :
       loopScanNet();
@@ -35,13 +37,13 @@ void RF69Manager::loopScanNet(){
   if (radio.receiveDone()
       && radio.DATALEN==3+1+RF69_CRYPT_SIZE
       && strncmp((char *)radio.DATA, "net", 3)==0 ) {
-    netparams.paired=true;
-    netparams.rdNet=radio.DATA[3];
+    netparams->paired=true;
+    netparams->rdNet=radio.DATA[3];
+    m_changed=true;
     for(int i=0;i<RF69_CRYPT_SIZE;i++) {
-      netparams.rdKey[i]=radio.DATA[i+4];
+      netparams->rdKey[i]=radio.DATA[i+4];
     }
     radio.promiscuous(false);
-    writeEEPROM();
     rdLedDisco();
     rdFindNet();
   } else if(millis()-last_scan>scan_net_delay) {
