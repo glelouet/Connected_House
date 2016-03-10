@@ -9,14 +9,15 @@
 #define ARDUINO_LIB_Moteino_Moteino_H_
 
 #include <Arduino.h>
-#include <RFM69_ATC.h>
 #include <SPIFlash.h>
 #include <OneWire.h>
 #include <EEPROM.h>
+
+//request here to be able to load the libs in other classes
+#include <RFM69_ATC.h>
+#include <Ethernet.h>
 #include <WirelessHEX69.h>
 
-//request here to be able to lod the lib in the ethshield
-#include <Ethernet.h>
 
 // version of the code is
 // abc where a, b, c in {0, 1..9, a..y, z}
@@ -130,58 +131,19 @@ byte DS18B20_PIN = 0x28;
 // RF69 (wireless radio) chip
 //////////////////////////////////////////////////////////
 
+
 public :
 
-// return true if last loop() retrieved a char * from the rf69
-bool rdRcv();
-
-// wireless radio
-RFM69_ATC radio;
+RF69Manager getRadio();
 
 //connect to a random network, with a random crypt key.
 void rdRandom();
 
-// return the present connection state of the radio : idle, search netowrk, set ip, transmit
-int rdState();
-
-// send data to a RF69 station if exists and connected
-// as this waits for an ACK, returns true if the ACK was received before timeout
-bool rdSendSync(char *data, byte targetId);
-
-//send data to a RF69 station, whether it exists or not. does not request ACK
-void rdSendAsync(char *data, byte targetId, bool ack=false);
-
-// send data to the broadcast on same network WORD
-void sendBCRF69(char *data);
-
-// search radio network and crypt key
-void rdSearchNet();
-
-//set radio network
-void rdSetNet(uint8_t net);
-
-// find the net to use
+// find the network to use
 void rdFindNet();
-
-// search radio ip
-void rdSearchIP();
-
-//set the ip to use
-void rdSetIP(uint8_t ip);
 
 // find the IP to use
 void rdFindIP();
-
-//return the used IP.
-uint8_t rdIp();
-
-bool rdPairing();
-
-// set pairing mode on, answering rdNet:key to broadcast on net word
-void rdPairOn();
-
-//deactivate pairing mod
-void rdPairOff();
 
 //flash the led for 2 s and send DISCO on network broadcast
 void rdLedDisco();
@@ -189,61 +151,11 @@ void rdLedDisco();
 //each element on the network must blink the led
 void rdIdLed();
 
+
 private :
 
-bool m_rdRcv = false;
+RF69Manager radio;
 
-//default gateway address
-byte gw_RF69=0;
-
-#define RADIO_IDLE 0
-#define RADIO_GETNET 1
-#define RADIO_GETIP 2
-#define RADIO_TRANSMIT 3
-#define RADIO_PAIRING 4
-
-int radio_state=RADIO_IDLE;
-
-#define RADIO_SCANNET 255
-
-unsigned long last_scan=0;
-unsigned long scan_net_delay=2000;
-//init radio
-void init_RF69();
-
-#define RF69_PAIRING_MS 60000 //1min of pairing time
-
-//time at which we deactivate pairing
-unsigned long pairingEnd=0;
-
-char *RD_NET_DISCO="REQ"MOTEINO_VERSION;
-char *RD_LED_DISCO="DISCO";
-char *RD_IP_DISCO="ping";
-
-// periodically send network request.
-void rdLoopScanNet();
-
-//last IP we sent message to
-uint8_t radio_ip=0;
-
-// find first IP not in use.
-void rdLoopScanIP();
-
-unsigned long radio_next_led=0;
-unsigned long radio_count_delay=3000;
-unsigned long radio_ledcount_duration=1500;
-
-void rdLoopPairing();
-
-void rdLoopTransmit();
-
-public :
-
-//check if data istransmitted through RF69
-void check_RF69();
-
-//show the radio status with the led
-void radioLed();
 
 //////////////////////////////////////////////////////////
 
