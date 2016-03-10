@@ -106,16 +106,6 @@ void Moteino::init_flash(){
 // RF69
 ///////////////////////////////////////////////////////////
 
-void Moteino::init_RF69(){
-  //init with any net/IP then ask to get them
-  radio.initialize(RF69_433MHZ,0,0);
-  rdFindNet();
-  #ifdef IS_RFM69HW //only for RFM69HW
-    radio.setHighPower();
-  #endif
-  radio.enableAutoPower(-60);
-}
-
 void Moteino::rdRandom(){
   netparams.paired=true;
   netparams.rdNet=random(255);
@@ -126,10 +116,6 @@ void Moteino::rdRandom(){
     Serial.println(F("randomed network"));
   }
   rdFindNet();
-}
-
-int Moteino::rdState() {
-  return radio_state;
 }
 
 void Moteino::rdSearchNet(){
@@ -316,25 +302,6 @@ void Moteino::sendBCRF69(char *data){
   radio.send(RF69_BROADCAST_ADDR, data, strlen(data));
 }
 
-void Moteino::check_RF69(){
-  m_rdRcv=false;
-  switch (radio_state) {
-    case RADIO_GETNET :
-      rdLoopScanNet();
-    break;
-    case RADIO_GETIP:
-      rdLoopScanIP();
-    break;
-    case RADIO_TRANSMIT :
-      rdLoopTransmit();
-    break;
-    case RADIO_PAIRING :
-      rdLoopPairing();
-    break;
-  }
-  radioLed();
-}
-
 bool Moteino::rdRcv(){
   return m_rdRcv;
 }
@@ -458,6 +425,7 @@ void Moteino::check_led(){
 ////////////////////////////////////////////////////////
 
 void Moteino::loop() {
-  check_RF69();
+  radio.loop();
+  radioLed();
   check_led();
 }
