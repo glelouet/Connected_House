@@ -134,27 +134,30 @@ byte DS18B20_PIN = 0x28;
 
 public :
 
-RF69Manager getRadio();
+	RF69Manager getRadio();
 
-//connect to a random network, with a random crypt key.
-void rdRandom();
+	//connect to a random network, with a random crypt key.
+	void rdRandom();
 
-// find the network to use
-void rdFindNet();
+	// find the network to use
+	void rdFindNet();
 
-// find the IP to use
-void rdFindIP();
+	// find the IP to use
+	void rdFindIP();
 
-//flash the led for 2 s and send DISCO on network broadcast
-void rdLedDisco();
+	//flash the led for 2 s and send DISCO on network broadcast
+	void rdLedDisco();
 
-//each element on the network must blink the led
-void rdIdLed();
+	//each element on the network must blink the led
+	void rdIdLed();
+
+	//show the radio status with the led
+	void radioLed();
 
 
 private :
 
-RF69Manager radio;
+	RF69Manager radio;
 
 
 //////////////////////////////////////////////////////////

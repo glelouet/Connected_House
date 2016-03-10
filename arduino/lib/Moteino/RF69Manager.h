@@ -4,15 +4,24 @@
 #include <Arduino.h>
 #include <RFM69_ATC.h>
 
-#define RADIO_IDLE 0
-#define RADIO_GETNET 1
-#define RADIO_GETIP 2
-#define RADIO_TRANSMIT 3
-#define RADIO_PAIRING 4
-
-#define RADIO_SCANNET 255
-
 class RF69Manager{
+
+public :
+
+  enum State {
+    IDLE,GETNET, GETIP, TRANSMIT, PAIRING
+  };
+
+  // return the present connection state of the radio : idle, search netowrk, set ip, transmit
+  State getState();
+
+  const uint8_t SCANNET    = 255;
+  const uint8_t GWIP       = 0;
+  const long    PAIRING_MS = 60000;
+
+private :
+
+  State state=idle;
 
 
 public :
@@ -33,9 +42,6 @@ public :
   // return true if last loop() retrieved a char * from the rf69
   bool hasRcv();
 
-
-  // return the present connection state of the radio : idle, search netowrk, set ip, transmit
-  int getState();
 
   //set radio network
   void setNet(uint8_t net);
@@ -68,51 +74,33 @@ private :
 
   bool m_rdRcv = false;
 
-  //default gateway address
-  byte gw_RF69=0;
+  //scan net
+  unsigned long last_scan=0;
+  unsigned long scan_net_delay=2000;
 
-  int radio_state=RADIO_IDLE;
+  //time at which we deactivate pairing
+  unsigned long pairingEnd=0;
 
-unsigned long last_scan=0;
-unsigned long scan_net_delay=2000;
-//init radio
-void init_RF69();
+  char *RD_NET_DISCO="REQ"MOTEINO_VERSION;
+  char *RD_LED_DISCO="DISCO";
+  char *RD_IP_DISCO="ping";
 
-#define RF69_PAIRING_MS 60000 //1min of pairing time
+  // periodically send network request.
+  void loopScanNet();
 
-//time at which we deactivate pairing
-unsigned long pairingEnd=0;
+  //last IP we sent message to
+  uint8_t lastIP=0;
 
-char *RD_NET_DISCO="REQ"MOTEINO_VERSION;
-char *RD_LED_DISCO="DISCO";
-char *RD_IP_DISCO="ping";
+  // find first IP not in use.
+  void loopScanIP();
 
-// periodically send network request.
-void rdLoopScanNet();
+  unsigned long radio_next_led=0;
+  unsigned long radio_count_delay=3000;
+  unsigned long radio_ledcount_duration=1500;
 
-//last IP we sent message to
-uint8_t radio_ip=0;
+  void loopPairing();
 
-// find first IP not in use.
-void rdLoopScanIP();
-
-unsigned long radio_next_led=0;
-unsigned long radio_count_delay=3000;
-unsigned long radio_ledcount_duration=1500;
-
-void rdLoopPairing();
-
-void rdLoopTransmit();
-
-public :
-
-//check if data istransmitted through RF69
-void check_RF69();
-
-//show the radio status with the led
-void radioLed();
-
-
+  void loopTransmit();
 
 };
 
