@@ -156,7 +156,7 @@ void RF69Manager::loopScanIP(){
     //maybe we can get this IP. We may also be competing for this IP : wait random
     delay(random(1000));
     if(sendSync(DISCO_IP_TRAME, m_IP)) return;
-    Serial.print(F("acquired IP ");
+    Serial.print(F("acquired IP "));
     Serial.println(m_IP);
     radio.promiscuous(false);
     radio.setAddress(m_IP);
