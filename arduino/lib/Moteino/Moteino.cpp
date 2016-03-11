@@ -144,10 +144,10 @@ void Moteino::radioLed(){
           ledCount(1, 2000);
           break;
         case GETIP :
-          ledCount(4, 400);
+          ledCount(4, 300);
           break;
         case GETNET :
-          ledCount(6, 400);
+          ledCount(6, 200);
           break;
         case IDLE :
           break;
