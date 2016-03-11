@@ -25,7 +25,8 @@ void Moteino::setup(){
   // flash gives us its unique id so we can translate it to a *mac* address for the RF69
   // we then initialize the RF69 using those parameters
   init_flash();
-  radio.init(&netParams);
+  init_RF69();
+  if(rewrite_EEPROM) writeEEPROM();
 }
 
 boolean Moteino::debug(int lvl) {
@@ -114,170 +115,7 @@ void Moteino::rdRandom(){
   if(debug(DEBUG_INFO)){
     Serial.println(F("randomed network"));
   }
-  rdFindNet();
-}
-
-void Moteino::rdSearchNet(){
-  netparams.paired=false;
-  writeEEPROM();
-  rdFindNet();
-}
-
-void Moteino::rdSetNet(uint8_t net){
-  netparams.rdNet=net;
-  netparams.paired=true;
-  radio.setNetwork(net);
-  writeEEPROM();
-  rdFindIP();
-}
-
-void Moteino::rdFindNet(){
-  if(netparams.paired) {
-    radio.setNetwork(netparams.rdNet);
-    radio.encrypt(netparams.rdKey);
-    rdFindIP();
-  } else {
-    radio_state=RADIO_GETNET;
-    last_scan=0;
-    radio.promiscuous();
-    radio.setNetwork(RADIO_SCANNET);
-    radio.encrypt(0);
-  }
-}
-
-void Moteino::rdLoopScanNet(){
-  if (radio.receiveDone()
-      && radio.DATALEN==3+1+RF69_CRYPT_SIZE
-      && strncmp((char *)radio.DATA, "net", 3)==0 ) {
-    netparams.paired=true;
-    netparams.rdNet=radio.DATA[3];
-    for(int i=0;i<RF69_CRYPT_SIZE;i++) {
-      netparams.rdKey[i]=radio.DATA[i+4];
-    }
-    radio.promiscuous(false);
-    writeEEPROM();
-    rdLedDisco();
-    rdFindNet();
-  } else if(millis()-last_scan>scan_net_delay) {
-    last_scan=millis();
-    sendBCRF69(RD_NET_DISCO);
-  }
-}
-
-void Moteino::rdSearchIP(){
-  if(radio_state==RADIO_GETIP) return;
-  //change the IP in params to broadcast
-  if(params.rdIP!=RF69_BROADCAST_ADDR) {
-    params.rdIP=RF69_BROADCAST_ADDR;
-    writeEEPROM();
-  }
-  radio_state=RADIO_GETIP;
-  radio_ip=RF69_BROADCAST_ADDR;
-  radio.setAddress(RF69_BROADCAST_ADDR);
-  radio.promiscuous();
-  radio.receiveDone();
-}
-
-void Moteino::rdSetIP(uint8_t ip){
-  params.rdIP=ip;
-  radio_ip=ip;
-  radio.setAddress(ip);
-  radio_state = RADIO_TRANSMIT;
-  writeEEPROM();
-}
-
-void Moteino::rdFindIP() {
-    if(params.rdIP!=RF69_BROADCAST_ADDR) {
-      radio_ip=params.rdIP;
-      radio.setAddress(radio_ip);
-      radio_state = RADIO_TRANSMIT;
-    } else {
-      rdSearchIP();
-    }
-}
-
-uint8_t Moteino::rdIp(){
-  return radio_ip;
-}
-
-void Moteino::rdLoopScanIP(){
-  ++radio_ip;
-  if(radio_ip==gw_RF69) radio_ip++;
-  bool ack = rdSendSync(RD_IP_DISCO, radio_ip);
-  if(!ack) {
-    //maybe we can get this IP. We may also be competing for this IP : wait random
-    delay(random(1000));
-    if(rdSendSync(RD_IP_DISCO, radio_ip)) return;
-    radio.promiscuous(false);
-    radio.setAddress(radio_ip);
-    radio_state = RADIO_TRANSMIT;
-    if(debug(DEBUG_INFO)) {
-      Serial.print(F("acquired IP "));
-      Serial.println(radio_ip);
-    }
-  }
-}
-
-void Moteino::rdPairOn(){
-  radio_state=RADIO_PAIRING;
-  pairingEnd=millis()+RF69_PAIRING_MS;
-  radio.promiscuous();
-  radio.setNetwork(RADIO_SCANNET);
-  radio.encrypt(0);
-}
-
-void Moteino::rdPairOff(){
-  radio.promiscuous(false);
-  rdFindNet();
-}
-
-bool Moteino::rdPairing(){
-  return radio_state==RADIO_PAIRING;
-}
-
-void Moteino::rdLoopPairing(){
-  if(pairingEnd<=millis()) {
-    if(debug(DEBUG_INFO))
-      Serial.println(F("pairing mode timeout"));
-    rdPairOff();
-  } else {
-    if (radio.receiveDone()) {
-      if(strcmp(RD_NET_DISCO, (char *)radio.DATA)==0) {
-        char data[3+1+RF69_CRYPT_SIZE+1];//"net",netId, cryptkey, 0
-        data[0]='n';data[1]='e';data[2]='t';
-        data[3]=netparams.rdNet;
-        for(int i=0;i<RF69_CRYPT_SIZE;i++){
-          data[i+4]=netparams.rdKey[i];
-        }
-        data[3+1+RF69_CRYPT_SIZE]=0;
-        sendBCRF69(data);
-        ledCount(10,100,true);
-      }
-    }
-  }
-}
-
-void Moteino::rdLoopTransmit(){
-  if (radio.receiveDone()) {
-    if(radio.SENDERID==radio_ip){
-      // another station has same IP : get the IP again
-      if(debug(DEBUG_WARN)){
-        Serial.print(F("collision on IP"));
-        Serial.println(radio_ip);
-      }
-      rdFindIP();
-      return;
-    }
-    m_rdRcv = true;
-    if (strcmp(RD_LED_DISCO, (char *)radio.DATA)==0){
-      rdLedDisco();
-    } else if (strcmp(RD_IP_DISCO, (char *)radio.DATA)==0){
-      radio.sendACK();
-    }else {
-      // check if radio received rom to write on the flash, then flash it
-      CheckForWirelessHEX(radio, flash, true);
-    }
-  }
+  radio.findNet();
 }
 
 void Moteino::rdLedDisco(){
@@ -288,23 +126,6 @@ void Moteino::rdIdLed(){
   sendBCRF69(RD_LED_DISCO);
   rdLedDisco();
 }
-
-bool Moteino::rdSendSync(char *trame, byte targetId){
-  return radio.sendWithRetry(targetId, ((uint8_t *) trame),  strlen(trame));
-}
-
-void Moteino::rdSendAsync(char *trame, byte targetId, bool ack){
-  radio.send(targetId, ((uint8_t *) trame),  strlen(trame), ack);
-}
-
-void Moteino::sendBCRF69(char *data){
-  radio.send(RF69_BROADCAST_ADDR, data, strlen(data));
-}
-
-bool Moteino::rdRcv(){
-  return m_rdRcv;
-}
-
 
 void Moteino::radioLed(){
   unsigned long time = millis();
@@ -393,7 +214,7 @@ void Moteino::ledCount(int nb, unsigned long delay_ms, boolean prio){
   }
 }
 
-void Moteino::check_led(){
+void Moteino::loopLed(){
   switch(led_state) {
     case LED_BLK:
       if(led_nxtchange<=millis()) {
@@ -424,7 +245,16 @@ void Moteino::check_led(){
 ////////////////////////////////////////////////////////
 
 void Moteino::loop() {
+
+  if(radio.hasChg()) writeEEPROM();
   radio.loop();
+  if(radio.hasRcv())
+  if (strcmp(RD_LED_DISCO, (char *)radio.DATA)==0){
+    rdLedDisco();
+  } else {
+    // check if radio received rom to write on the flash, then flash it
+    CheckForWirelessHEX(radio, flash, true);
+  }
   radioLed();
-  check_led();
+  loopLed();
 }

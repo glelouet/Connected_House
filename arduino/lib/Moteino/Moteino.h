@@ -14,6 +14,9 @@
 #include <EEPROM.h>
 #include <Params.h>
 
+#include <RF69Manager.h>
+#include <EthManager.h>
+
 //request here to be able to load the libs in other classes
 #include <RFM69_ATC.h>
 #include <Ethernet.h>
@@ -62,6 +65,7 @@ NetParams netparams= {
 	0,
 	false,
 	100,
+	RF69_BROADCAST_ADDR,
 	{0,0,0,0,0,0,0,0,0,0,0,0,0,MOTEINO_VERSION[0],MOTEINO_VERSION[1],MOTEINO_VERSION[2]}
 };
 
@@ -69,8 +73,7 @@ NetParams netparams= {
 Params params = {
   MOTEINO_VERSION,
   // The default values
-	DEBUG_FULL,
-	RF69_BROADCAST_ADDR
+	DEBUG_FULL
 };
 
 // load params from EEPROM. return false if version mismatch
@@ -81,11 +84,8 @@ void writeEEPROM();
 
 private :
 
-size_t paramsOffset = sizeof(netparams);
-
 void init_EEPROM();
-// set to true to store data in EEPROM post setup()
-boolean rewrite_EEPROM = false;
+
 // write params to the serial
 void printParams();
 
@@ -119,19 +119,14 @@ byte DS18B20_PIN = 0x28;
 
 public :
 
-	RF69Manager getRadio();
+	RF69Manager radio;
 
 	//connect to a random network, with a random crypt key.
 	void rdRandom();
 
-	// find the network to use
-	void rdFindNet();
-
-	// find the IP to use
-	void rdFindIP();
-
 	//flash the led for 2 s and send DISCO on network broadcast
 	void rdLedDisco();
+
 
 	//each element on the network must blink the led
 	void rdIdLed();
@@ -139,13 +134,17 @@ public :
 	//show the radio status with the led
 	void radioLed();
 
-
 private :
 
-	RF69Manager radio;
+	char *RD_LED_DISCO="DISCO";
+
+	unsigned long radio_next_led=0;
+	unsigned long radio_count_delay=3000;
+	unsigned long radio_ledcount_duration=1500;
 
 
 //////////////////////////////////////////////////////////
+
 
 public :
 
@@ -201,7 +200,7 @@ void ledFlash(unsigned long delay_ms);
 
 void ledCount(int nb, unsigned long delay_ms, boolean prio=false);
 
-void check_led();
+void loopLed();
 
 /////////////////////////////////////////////////////////
 

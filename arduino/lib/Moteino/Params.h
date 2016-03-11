@@ -15,6 +15,9 @@ struct NetParams {
 	// another network number from reaching this device
   uint8_t rdNet;
 
+	// rf69 address to use when paired, if not set to RF69_BROADCAST_ADDR
+	uint8_t rdIP;
+
 	// rf69 crypt key
 	char rdKey[RF69_CRYPT_SIZE];
 };
@@ -25,9 +28,6 @@ struct Params{
     char version[4];
 
   	byte debug;
-
-  	// rf69 address to use when paired, if not set to RF69_BROADCAST_ADDR
-  	uint8_t rdIP;
 };
 
 #endif
