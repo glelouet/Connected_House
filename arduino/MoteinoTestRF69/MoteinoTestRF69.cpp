@@ -2,6 +2,7 @@
 #include <Button.h>
 #include <ButtonCommand.h>
 #include <SerialShell.h>
+#include <RF69Manager.h>
 
 #define BTN_PIN 3
 #define MOTEINO_HAS_BTN
@@ -52,10 +53,10 @@ void loop(){
   sh.loop();
   #endif
   unsigned long time = millis();
-  if(moteino.rdState()==RADIO_TRANSMIT ) {
+  if(moteino.radio.getState()==TRANSMIT ) {
     if(time-last_send >delay_ms) {
-      itoa(moteino.rdIp(), buff+4,10);
-      moteino.sendBCRF69(buff);
+      itoa(moteino.radio.getIp(), buff+4,10);
+      moteino.radio.sendBC(buff);
       last_send = time;
     }
   }

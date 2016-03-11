@@ -24,25 +24,25 @@ void ButtonCommand::loop() {
         if(m->debug(DEBUG_FULL)){
           Serial.println(F("btn acquire net"));
         }
-        m->rdSearchNet();
+        m->radio.searchNet();
       } else if(series[0]<=100){// 3s<push<=10s : random net and pairing
         if(m->debug(DEBUG_FULL)){
           Serial.println(F("btn rd net"));
         }
         m->rdRandom();
-        m->rdPairOn();
+        m->radio.pair();
       } else {//10s<push
       }
     } else if (series[2]==0){// two pushes : pairing
       if(m->debug(DEBUG_FULL)){
         Serial.println(F("btn pairon"));
       }
-      m->rdPairOn();
+      m->radio.pair();
     }else if (series[3]==0){// three pushes : stop pairing
       if(m->debug(DEBUG_FULL)){
         Serial.println(F("btn pairoff"));
       }
-      m->rdPairOff();
+      m->radio.pair(false);
     }
   }
 }

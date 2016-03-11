@@ -25,8 +25,7 @@ void Moteino::setup(){
   // flash gives us its unique id so we can translate it to a *mac* address for the RF69
   // we then initialize the RF69 using those parameters
   init_flash();
-  init_RF69();
-  if(rewrite_EEPROM) writeEEPROM();
+  radio.init(&netparams);
 }
 
 boolean Moteino::debug(int lvl) {
@@ -65,6 +64,7 @@ boolean Moteino::loadEEPROM(){
       for (size_t t=0; t<sizeof(netparams); t++)
         *((char*)&netparams + t) = EEPROM.read(t);
     }
+    size_t paramsOffset=sizeof(netparams);
     if (EEPROM.read(paramsOffset + 0) == MOTEINO_VERSION[0]
         && EEPROM.read(paramsOffset + 1) == MOTEINO_VERSION[1]
         && EEPROM.read(paramsOffset + 2) == MOTEINO_VERSION[2]){
@@ -84,6 +84,7 @@ void Moteino::writeEEPROM() {
   chkSetNet();
   for (unsigned int t=0; t<sizeof(netparams); t++)
     EEPROM.update(t, *((char*)&netparams + t));
+  size_t paramsOffset=sizeof(netparams);
   for (unsigned int t=0; t<sizeof(params); t++)
     EEPROM.update(paramsOffset + t, *((char*)&params + t));
   if(debug(DEBUG_INFO))
@@ -123,20 +124,33 @@ void Moteino::rdLedDisco(){
 }
 
 void Moteino::rdIdLed(){
-  sendBCRF69(RD_LED_DISCO);
+  radio.sendBC(RD_LED_DISCO);
   rdLedDisco();
 }
 
 void Moteino::radioLed(){
   unsigned long time = millis();
   if(time>=radio_next_led){
-    if(rdPairing()){
+    if(radio.isPairing()){
       if(led_state==LED_OFF)
         ledBlink(radio_ledcount_duration);
     } else {
-      int count = 2*(RADIO_TRANSMIT-radio_state+1);
-      int period = 2*radio_ledcount_duration/(count*2);
-      ledCount(count, period);
+      switch(radio.getState()){
+        case TRANSMIT :
+          ledCount(1, 100);
+          break;
+        case PAIRING :
+          ledCount(1, 2);
+          break;
+        case GETIP :
+          ledCount(4, 100);
+          break;
+        case GETNET :
+          ledCount(6, 100);
+          break;
+        case IDLE :
+          break;
+      }
     }
     radio_next_led=time+radio_count_delay+radio_ledcount_duration;
   }
@@ -248,12 +262,13 @@ void Moteino::loop() {
 
   if(radio.hasChg()) writeEEPROM();
   radio.loop();
-  if(radio.hasRcv())
-  if (strcmp(RD_LED_DISCO, (char *)radio.DATA)==0){
-    rdLedDisco();
-  } else {
-    // check if radio received rom to write on the flash, then flash it
-    CheckForWirelessHEX(radio, flash, true);
+  if(radio.hasRcv()){
+    if (strcmp(RD_LED_DISCO, (char *)radio.getData())==0){
+      rdLedDisco();
+    } else {
+      // check if radio received rom to write on the flash, then flash it
+      CheckForWirelessHEX(radio.getRadio(), flash, true);
+    }
   }
   radioLed();
   loopLed();

@@ -27,9 +27,6 @@
 // abc where a, b, c in {0, 1..9, a..y, z}
 #define MOTEINO_VERSION "005"
 
-//16 bytes for a crypt key
-#define RF69_CRYPT_SIZE 16
-
 // debug levels
 #define DEBUG_NONE 0
 #define DEBUG_WARN 1
@@ -136,7 +133,7 @@ public :
 
 private :
 
-	char *RD_LED_DISCO="DISCO";
+	const char *RD_LED_DISCO="DISCO";
 
 	unsigned long radio_next_led=0;
 	unsigned long radio_count_delay=3000;

@@ -3,6 +3,10 @@
 #ifndef PARAMS_H
 #define PARAMS_H
 
+
+//16 bytes for a crypt key
+#define RF69_CRYPT_SIZE 16
+
 struct NetParams {
 
 	//checksum

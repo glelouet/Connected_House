@@ -1,9 +1,5 @@
 #include <RF69Manager.h>
 
-State RF69Manager::getState(){
-  return state;
-}
-
 void RF69Manager::init(NetParams * params){
   netparams = params;
   radio.initialize(RF69_433MHZ,0,0);
@@ -30,33 +26,22 @@ void RF69Manager::loop(){
     case PAIRING :
       loopPairing();
     break;
+    case IDLE :
+    break;
   }
 }
 
-bool RF69Manager::sendSync(char *trame, byte targetId){
+bool RF69Manager::sendSync(const char *trame, byte targetId){
   return radio.sendWithRetry(targetId, ((uint8_t *) trame),  strlen(trame));
 }
 
-void RF69Manager::sendAsync(char *trame, byte targetId, bool ack){
+void RF69Manager::sendAsync(const char *trame, byte targetId, bool ack){
   radio.send(targetId, ((uint8_t *) trame),  strlen(trame), ack);
 }
 
-void RF69Manager::sendBC(char *data){
+void RF69Manager::sendBC(const char *data){
   radio.send(RF69_BROADCAST_ADDR, data, strlen(data));
 }
-
-bool RF69Manager::hasRcv(){
-  return m_rcv;
-}
-
-bool RF69Manager::hasChg(){
-  return m_chg;
-}
-
-volatile uint6_t * RF69Manager::getData(){
-  return radio.DATA;
-}
-
 
 
 void RF69Manager::setNet(uint8_t net){
@@ -64,7 +49,7 @@ void RF69Manager::setNet(uint8_t net){
   netparams->paired=true;
   m_chg=true;
   radio.setNetwork(net);
-  findIP();
+  findIp();
 }
 
 uint8_t RF69Manager::getNet(){
@@ -76,7 +61,7 @@ void RF69Manager::findNet(){
   if(netparams->paired) {
     radio.setNetwork(netparams->rdNet);
     radio.encrypt(netparams->rdKey);
-    findIP();
+    findIp();
   } else {
     searchNet();
   }
@@ -85,28 +70,28 @@ void RF69Manager::findNet(){
 void RF69Manager::searchNet(){
   netparams->paired=false;
   m_chg=true;
-  radio_state=RADIO_GETNET;
+  state=GETNET;
   last_scan=0;
   radio.promiscuous();
-  radio.setNetwork(RADIO_SCANNET);
+  radio.setNetwork(SCANNET);
   radio.encrypt(0);
 }
 
 
 void RF69Manager::setIP(uint8_t ip){
-  netparams->rdIP =  m_ip = ip;
+  netparams->rdIP =  m_IP = ip;
   radio.setAddress(ip);
   state = TRANSMIT;
   m_chg=true;
 }
 
 uint8_t RF69Manager::getIp(){
-  return m_ip;
+  return m_IP;
 }
 
-void RF69Manager::findIP() {
+void RF69Manager::findIp() {
     if(netparams->rdIP!=RF69_BROADCAST_ADDR) {
-      m_IP=params->rdIP;
+      m_IP=netparams->rdIP;
       radio.setAddress(m_IP);
       state = TRANSMIT;
     } else {
@@ -141,7 +126,7 @@ void RF69Manager::pair(bool on){
     radio.encrypt(0);
   } else {
     radio.promiscuous(false);
-    rdFindNet();
+    findNet();
   }
 }
 
@@ -165,18 +150,14 @@ void RF69Manager::loopScanNet(){
 void RF69Manager::loopScanIP(){
   ++m_IP;
   if(m_IP==GWIP) m_IP++;
-  bool ack = sendSync(RD_IP_DISCO, m_IP);
+  bool ack = sendSync(DISCO_IP_TRAME, m_IP);
   if(!ack) {
     //maybe we can get this IP. We may also be competing for this IP : wait random
     delay(random(1000));
-    if(rdSendSync(RD_IP_DISCO, m_IP)) return;
+    if(sendSync(DISCO_IP_TRAME, m_IP)) return;
     radio.promiscuous(false);
     radio.setAddress(m_IP);
-    radio_state = RADIO_TRANSMIT;
-    if(debug(DEBUG_INFO)) {
-      Serial.print(F("acquired IP "));
-      Serial.println(m_IP);
-    }
+    state = TRANSMIT;
   }
 }
 
@@ -184,11 +165,11 @@ void RF69Manager::loopTransmit(){
   if (radio.receiveDone()) {
     if(radio.SENDERID==m_IP){
       // another station has same IP : get the IP again
-      findIP();
+      findIp();
       return;
     }
     m_rcv = true;
-    if (strcmp(RD_IP_DISCO, (char *)radio.DATA)==0){
+    if (strcmp(DISCO_IP_TRAME, (char *)radio.DATA)==0){
       radio.sendACK();
     }
   }
@@ -196,21 +177,20 @@ void RF69Manager::loopTransmit(){
 
 void RF69Manager::loopPairing(){
   if(pairingEnd<=millis()) {
-    if(debug(DEBUG_INFO))
-      Serial.println(F("pairing mode timeout"));
-    rdPairOff();
+    pair(false);
+    m_chg=true;
   } else {
     if (radio.receiveDone()) {
-      if(strcmp(RD_NET_DISCO, (char *)radio.DATA)==0) {
+      if(strcmp(DISCO_NET_TRAME, (char *)radio.DATA)==0) {
         char data[3+1+RF69_CRYPT_SIZE+1];//"net",netId, cryptkey, 0
         data[0]='n';data[1]='e';data[2]='t';
-        data[3]=netparams.rdNet;
+        data[3]=netparams->rdNet;
         for(int i=0;i<RF69_CRYPT_SIZE;i++){
-          data[i+4]=netparams.rdKey[i];
+          data[i+4]=netparams->rdKey[i];
         }
         data[3+1+RF69_CRYPT_SIZE]=0;
-        sendBCRF69(data);
-        ledCount(10,100,true);
+        sendBC(data);
+        m_chg=true;
       }
     }
   }

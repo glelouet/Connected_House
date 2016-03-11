@@ -5,16 +5,34 @@
 #include <RFM69_ATC.h>
 #include <Params.h>
 
+enum State {
+  IDLE,GETNET, GETIP, TRANSMIT, PAIRING
+};
+
 class RF69Manager{
+
+private :
+
+  // wireless radio
+  RFM69_ATC radio;
+
+  NetParams * netparams;
+
+  State state=IDLE;
+  bool m_rcv = false;
+  bool m_chg = false;
+
 
 public :
 
-  enum State {
-    IDLE,GETNET, GETIP, TRANSMIT, PAIRING
-  };
-
   // return the present connection state of the radio : idle, search netowrk, set ip, transmit
-  State getState();
+  State getState(){
+    return state;
+  }
+
+  RFM69 getRadio(){
+    return radio;
+  }
 
   const uint8_t SCANNET    = 255;
   const uint8_t GWIP       = 0;
@@ -25,24 +43,46 @@ public :
 
   // send data to a RF69 station if exists and connected
   // as this waits for an ACK, returns true if the ACK was received before timeout
-  bool sendSync(char *data, byte targetId);
+  bool sendSync(const char *data, byte targetId);
 
   // send data to a RF69 station, whether it exists or not.
   // does not request ACK unless ack is set to true
-  void sendAsync(char *data, byte targetId, bool ack=false);
+  void sendAsync(const char *data, byte targetId, bool ack=false);
 
   // send data to the broadcast on same network
-  void sendBC(char *data);
+  void sendBC(const char *data);
 
 
   // return true if last loop() retrieved a char * from the rf69
-  bool hasRcv();
+  bool hasRcv(){
+    return m_rcv;
+  };
 
   // return true if the last loop() did modifuy the network status.
-  bool hasChg();
+  bool hasChg(){
+    return m_chg;
+  };
 
   //get the data received by last loop()
-  volatile uint6_t * getData();
+  volatile uint8_t * getData(){
+    return radio.DATA;
+  };
+
+  volatile uint8_t getDataLen(){
+    return radio.DATALEN;
+  };
+
+  volatile uint8_t getSenderId(){
+    return radio.SENDERID;
+  };
+
+  volatile uint8_t getTargetId(){
+    return radio.TARGETID;
+  }
+
+  volatile uint8_t getAckRequested(){
+    return radio.ACK_REQUESTED;
+  }
 
 
   //set radio network
@@ -79,18 +119,9 @@ public :
 
 private :
 
-  // wireless radio
-  RFM69_ATC radio;
-
-  NetParams * netparams;
-
-  State state=IDLE;
-  bool m_rcv = false;
-  bool m_chg = false;
-
 
   //scan net
-  char *DISCO_NET_TRAME="REQ"MOTEINO_VERSION;
+  const char *DISCO_NET_TRAME = "REQ";
   unsigned long last_scan=0;
   unsigned long scan_net_delay=2000;
 
@@ -99,7 +130,7 @@ private :
 
 
   // IP discovery
-  char *DISCO_IP_TRAME="ping";
+  const char *DISCO_IP_TRAME="ping";
   // IP used or trying to be used.
   uint8_t m_IP=0;
 

@@ -26,13 +26,13 @@ void SerialShell::loop(){
       serial_blength=0;
     }
   }
-  if(m->rdRcv()){
+  if(m->radio.hasRcv()){
     Serial.print(F("["));
-    Serial.print(m->radio.SENDERID);
+    Serial.print(m->radio.getSenderId());
     Serial.print(F("->"));
-    Serial.print(m->radio.TARGETID);
+    Serial.print(m->radio.getTargetId());
     Serial.print(F("]>"));
-    Serial.println((char *)m->radio.DATA);
+    Serial.println((char *)m->radio.getData());
   }
 }
 
@@ -41,7 +41,7 @@ void SerialShell::printParams(){
   Serial.print(F("debug="));Serial.println(m->params.debug);
   Serial.print(F("paired="));Serial.println(m->netparams.paired);
   Serial.print(F("rdNet="));Serial.println(m->netparams.rdNet);
-  Serial.print(F("rdIP="));Serial.println(m->params.rdIP);
+  Serial.print(F("rdIP="));Serial.println(m->netparams.rdIP);
   Serial.print(F("rdKey="));
   for(int i=0;i<RF69_CRYPT_SIZE;i++) {
     Serial.print(' ');
@@ -54,18 +54,18 @@ void SerialShell::handleSerialMessage(char *message) {
     uint8_t rdNet = atoi(message+strlen("rdnet="));
     Serial.print(F("set rdnet "));
     Serial.println(rdNet);
-    m->rdSetNet(rdNet);
+    m->radio.setNet(rdNet);
   } else if(strcmp(message, "rdsnet")==0) {
     Serial.println(F("search rd net"));
-    m->rdSearchNet();
+    m->radio.searchNet();
   } else if(strncmp(message, "rdip=", strlen("rdip="))==0) {
     uint8_t netIP = atoi(message+strlen("rdip="));
     Serial.print(F("set rdip "));
     Serial.println(netIP);
-    m->rdSetIP(netIP);
+    m->radio.setIP(netIP);
   } else if(strcmp(message, "rdsip")==0) {
     Serial.println(F("acquiring radio IP"));
-    m->rdSearchIP();
+    m->radio.searchIP();
   } else if(strcmp(message, "rdran")==0) {
     Serial.println(F("ran rd data"));
     m->rdRandom();
@@ -84,9 +84,9 @@ void SerialShell::handleSerialMessage(char *message) {
     Serial.println(debug);
     m->params.debug=debug;
   } else if(strcmp(message, "pairon")==0) {
-    m->rdPairOn();
+    m->radio.pair();
   } else if(strcmp(message, "pairoff")==0) {
-    m->rdPairOff();
+    m->radio.pair(false);
   } else if(strncmp(message, "blink ", strlen("blink "))==0) {
     int time = atoi(message+strlen("blink "));
     m->ledBlink(time);

@@ -1,4 +1,4 @@
-#include <EthShield.h>
+#include <EthManager.h>
 
 void EthShield::init(){
   hasEthernet=digitalRead(ETHERNET_PIN);
