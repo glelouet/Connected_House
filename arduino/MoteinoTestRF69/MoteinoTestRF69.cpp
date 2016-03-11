@@ -53,12 +53,10 @@ void loop(){
   sh.loop();
   #endif
   unsigned long time = millis();
-  if(moteino.radio.getState()==TRANSMIT ) {
-    if(time-last_send >delay_ms) {
+  if(moteino.radio.getState()==TRANSMIT && time-last_send >delay_ms) {
       itoa(moteino.radio.getIp(), buff+4,10);
       moteino.radio.sendBC(buff);
       last_send = time;
-    }
   }
   #ifdef MOTEINO_HAS_BTN
     bc.loop();

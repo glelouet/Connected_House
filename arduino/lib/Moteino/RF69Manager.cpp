@@ -141,6 +141,7 @@ void RF69Manager::loopScanNet(){
       netparams->rdKey[i]=radio.DATA[i+4];
     }
     radio.promiscuous(false);
+    findNet();
   } else if(millis()-last_scan>scan_net_delay) {
     last_scan=millis();
     sendBC(DISCO_NET_TRAME);
@@ -178,6 +179,7 @@ void RF69Manager::loopTransmit(){
 void RF69Manager::loopPairing(){
   if(pairingEnd<=millis()) {
     pair(false);
+    Serial.println("pairing timeout");
     m_chg=true;
   } else {
     if (radio.receiveDone()) {
@@ -190,7 +192,6 @@ void RF69Manager::loopPairing(){
         }
         data[3+1+RF69_CRYPT_SIZE]=0;
         sendBC(data);
-        m_chg=true;
       }
     }
   }

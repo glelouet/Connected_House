@@ -26,6 +26,7 @@ void Moteino::setup(){
   // we then initialize the RF69 using those parameters
   init_flash();
   radio.init(&netparams);
+  radio.findNet();
 }
 
 boolean Moteino::debug(int lvl) {
@@ -137,16 +138,16 @@ void Moteino::radioLed(){
     } else {
       switch(radio.getState()){
         case TRANSMIT :
-          ledCount(1, 100);
+          ledCount(1, 400);
           break;
         case PAIRING :
-          ledCount(1, 2);
+          ledCount(1, 2000);
           break;
         case GETIP :
-          ledCount(4, 100);
+          ledCount(4, 400);
           break;
         case GETNET :
-          ledCount(6, 100);
+          ledCount(6, 400);
           break;
         case IDLE :
           break;
