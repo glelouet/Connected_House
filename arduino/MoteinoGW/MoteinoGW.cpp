@@ -15,7 +15,7 @@
 #include <Button.h>
 #include <ButtonCommand.h>
 #include <SerialShell.h>
-#include <EthManager.h>
+#include <GWManager.h>
 
 //comment to prevent adding the SerialShell
 #define MOTEINO_HAS_SERIAL

@@ -100,11 +100,11 @@ void SerialShell::handleSerialMessage(char *message) {
     int time = atoi(message+strlen("flash "));
     m->ledFlash(time);
   } else if(strncmp(message, "burn ", strlen("burn "))==0) {
-    long burn_t = atoi(message+strlen("burn "));
+    long burn_t = atol(message+strlen("burn "));
     burn_next=0;
     burn_end=burn_t+millis();
   } else if(strncmp(message, "burnd=", strlen("burnd="))==0) {
-    burn_delay=atoi(message+strlen("burnd="));
+    burn_delay=atol(message+strlen("burnd="));
   } else {
     Serial.print(F("discarding "));
     Serial.println(message);

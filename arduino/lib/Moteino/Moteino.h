@@ -16,7 +16,7 @@
 #include <inttypes.h>
 
 #include <RF69Manager.h>
-#include <EthManager.h>
+#include <GWManager.h>
 
 //request here to be able to load the libs in other classes
 #include <RFM69_ATC.h>
