@@ -50,7 +50,7 @@ void sendTemp(){
 	uint8_t probe = 0;
 	uint8_t value =moteino.radio.readTemperature();
 	buff[0]='\0';
-	sprintf(buff, "SEND%" PRIu32 ":%" PRIu8 ":%" PRIu8, id, probe, value);
+	sprintf(buff, "SEND%" PRIu32 ";%" PRIu8 ";%" PRIu8, id, probe, value);
 	moteino.radio.sendGW(buff);
 	Serial.println(buff);
 }
