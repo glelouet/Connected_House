@@ -52,6 +52,11 @@ public :
   // send data to the broadcast on same network
   void sendBC(const char *data);
 
+  //send a trame to the gw.
+  void sendGW(const char* data){
+    sendAsync(data, GWIP);
+  }
+
 
   // return true if last loop() retrieved a char * from the rf69
   bool hasRcv(){
@@ -82,6 +87,10 @@ public :
 
   volatile uint8_t getAckRequested(){
     return radio.ACK_REQUESTED;
+  }
+
+  uint8_t readTemperature(){
+    return radio.readTemperature();
   }
 
 

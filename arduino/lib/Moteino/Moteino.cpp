@@ -17,6 +17,7 @@ Moteino::~Moteino(){
 }
 
 void Moteino::setup(){
+  strcpy(params.version, MOTEINO_VERSION);
   pinMode(LED_PIN, OUTPUT);
   Serial.begin(SERIAL_BAUD);
   init_EEPROM();
@@ -37,7 +38,7 @@ boolean Moteino::debug(int lvl) {
 // the xor is stored at index 0, sor P ^ chk(P) should result in 0
 boolean Moteino::chkNetEEPROM(){
   byte chk=0;
-  for (int index = 0 ; index < sizeof(netparams)  ; ++index) {
+  for (size_t index = 0 ; index < sizeof(netparams)  ; ++index) {
     chk=chk^EEPROM[index];
   }
   if(chk!=0 && debug(DEBUG_WARN)) {
@@ -54,7 +55,7 @@ void Moteino::init_EEPROM(){
 // xor the values of netparams and store the resulting byte in the first field
 void Moteino::chkSetNet(){
   netparams.chk=0;
-  for(int i=1;i<sizeof(netparams);i++) {
+  for(size_t i=1;i<sizeof(netparams);i++) {
     netparams.chk^= *((byte*) &netparams+i);
   }
 }

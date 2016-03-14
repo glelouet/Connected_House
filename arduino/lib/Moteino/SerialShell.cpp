@@ -34,6 +34,12 @@ void SerialShell::loop(){
     Serial.print(F("]>"));
     Serial.println((char *)m->radio.getData());
   }
+  long time= millis();
+  if(time<burn_end && time>burn_next){
+    m->radio.sendBC("coucou j'ai chaud");
+    burn_next+=burn_delay;
+    if(burn_next<time) burn_next=time+1;
+  }
 }
 
 void SerialShell::printParams(){
@@ -93,6 +99,12 @@ void SerialShell::handleSerialMessage(char *message) {
   } else if(strncmp(message, "flash ", strlen("flash "))==0) {
     int time = atoi(message+strlen("flash "));
     m->ledFlash(time);
+  } else if(strncmp(message, "burn ", strlen("burn "))==0) {
+    long burn_t = atoi(message+strlen("burn "));
+    burn_next=0;
+    burn_end=burn_t+millis();
+  } else if(strncmp(message, "burnd=", strlen("burnd="))==0) {
+    burn_delay=atoi(message+strlen("burnd="));
   } else {
     Serial.print(F("discarding "));
     Serial.println(message);

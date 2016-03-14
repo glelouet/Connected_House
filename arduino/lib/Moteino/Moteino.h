@@ -13,6 +13,7 @@
 #include <OneWire.h>
 #include <EEPROM.h>
 #include <Params.h>
+#include <inttypes.h>
 
 #include <RF69Manager.h>
 #include <EthManager.h>
@@ -26,14 +27,6 @@
 // version of the code is
 // abc where a, b, c in {0, 1..9, a..y, z}
 #define MOTEINO_VERSION "005"
-
-// debug levels
-#define DEBUG_NONE 0
-#define DEBUG_WARN 1
-#define DEBUG_INFO 2
-#define DEBUG_FULL 3
-
-#define INCLUDE_DEBUG
 
 class Moteino {
 	public:
@@ -58,20 +51,10 @@ int SERIAL_BAUD = 9600;
 //////////////////////////////////////////////////////////
 
 //store network data that are kept between firmware updates.
-NetParams netparams= {
-	0,
-	false,
-	100,
-	RF69_BROADCAST_ADDR,
-	{0,0,0,0,0,0,0,0,0,0,0,0,0,MOTEINO_VERSION[0],MOTEINO_VERSION[1],MOTEINO_VERSION[2]}
-};
+NetParams netparams ;
 
 // structure of internal parameters we store in the EEPROM
-Params params = {
-  MOTEINO_VERSION,
-  // The default values
-	DEBUG_FULL
-};
+Params params ;
 
 // load params from EEPROM. return false if version mismatch
 boolean loadEEPROM();
@@ -142,6 +125,10 @@ private :
 
 //////////////////////////////////////////////////////////
 
+private :
+
+	uint32_t flashId = 0;
+
 
 public :
 
@@ -152,10 +139,12 @@ public :
 #endif
 // self flasher
 SPIFlash flash;
-// unique ID of flash chip
-uint32_t flashId = 1;
 //init the flash part
 void init_flash();
+
+uint32_t getId(){
+	return flashId;
+}
 
 static char *ftoa(double f,char *a, int precision) {
  long p[] = {0,10,100,1000,10000,100000,1000000,10000000,100000000};

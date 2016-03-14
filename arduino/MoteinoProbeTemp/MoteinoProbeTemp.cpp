@@ -1,71 +1,71 @@
-// rf69_client.pde
-// -*- mode: C++ -*-
-// Example sketch showing how to create a simple messageing client
-// with the RH_RF69 class. RH_RF69 class does not provide for addressing or
-// reliability, so you should only use RH_RF69  if you do not need the higher
-// level messaging abilities.
-// It is designed to work with the other example rf69_server.
-// Demonstrates the use of AES encryption, setting the frequency and modem
-// configuration
-// Tested on Moteino with RFM69 http://lowpowerlab.com/moteino/
-// Tested on miniWireless with RFM69 www.anarduino.com/miniwireless
-// Tested on Teensy 3.1 with RF69 on PJRC breakout board
-
 #include <Moteino.h>
+#include <Button.h>
+#include <ButtonCommand.h>
+#include <SerialShell.h>
+#include <RF69Manager.h>
 
-long TRANSMITPERIOD = 2000; //transmit a packet to gateway so often (in ms)
-long lastPeriod = 0;
+#define BTN_PIN 3
+#define MOTEINO_HAS_BTN
+#define MOTEINO_HAS_SERIAL
+
+//uncomment to prevent the include of serial and button-related code
+//#define MOTEINO_NO_COMMAND
+
+
+#ifdef MOTEINO_NO_COMMAND
+#undef MOTEINO_HAS_BTN
+#undef MOTEINO_HAS_SERIAL
+#endif
 
 Moteino moteino;
+#ifdef MOTEINO_HAS_BTN
+Button btn;
+ButtonCommand bc;
+#endif
+#ifdef MOTEINO_HAS_SERIAL
+SerialShell sh;
+#endif
+
+char buff[20];
 
 void setup()
 {
-	moteino.setup();
+  moteino.setup();
+  #ifdef MOTEINO_HAS_BTN
+  btn.init(BTN_PIN, 500);
+  bc.init(&btn, &moteino);
+  #else
+  moteino.rdSearchNet();
+  #endif
+  #ifdef MOTEINO_HAS_SERIAL
+  sh.init(&moteino);
+  #endif
 }
+
+unsigned long last_send=0;
+unsigned long delay_ms=5000;
 
 void sendTemp(){
-  int currPeriod = millis()/TRANSMITPERIOD;
-  if (currPeriod != lastPeriod)
-  {
-    lastPeriod=currPeriod;
-  	if (DEBUG) Serial.println("Loop");
-		float temp;
-  	char buf2[20];
-    // Lit la température ambiante à ~1Hz
-    //if(getTemperature(&temp)) {
-   temp = -10;
-   if (DEBUG) {
-    // Affiche la température
-      Serial.print("Temperature : ");
-      Serial.print(temp);
-      Serial.write(' '); // caractère °
-      Serial.write('C');
-      Serial.println();
-    }
-  	//}
-  	//delay(500);
-		moteino.ftoa(temp,buf2,0);
-  	Serial.println("sending to gateway : ");  Serial.print(buf2);
-  	Serial.println();
-		char trame[100];
-		memset(trame,'\0',100);
-		sprintf(trame,"%lu;%c%c%c;",moteino.flashId,VERSION[0],VERSION[1],VERSION[2]);
-		  strcat(trame, buf2);
-  	moteino.sendRF69(gw_, trame);
-  }
+	uint32_t id= moteino.getId();
+	uint8_t probe = 0;
+	uint8_t value =moteino.radio.readTemperature();
+	buff[0]='\0';
+	sprintf(buff, "SEND%" PRIu32 ":%" PRIu8 ":%" PRIu8, id, probe, value);
+	moteino.radio.sendGW(buff);
+	Serial.println(buff);
 }
 
-
-
-void loop()
-{
-  // Check for existing RF data, potentially for a new sketch wireless upload
-  // For this to work this check has to be done often enough to be
-  // picked up when a GATEWAY is trying hard to reach this node for a new sketch wireless upload
-	moteino.loop();
-
-  ////////////////////////////////////////////////////////////////////////////////////////////
-  // Normal sketch code here
-   sendTemp();
-  ///////////////////////////////////////////////////////////////////////////////////////////
+void loop(){
+  moteino.loop();
+  #ifdef MOTEINO_HAS_SERIAL
+  sh.loop();
+  #endif
+  unsigned long time = millis();
+  if(moteino.radio.getState()==TRANSMIT && time-last_send >delay_ms) {
+		sendTemp();
+    last_send = time;
+  }
+  #ifdef MOTEINO_HAS_BTN
+    bc.loop();
+  #endif
 }

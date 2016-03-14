@@ -15,12 +15,10 @@
 #include <Button.h>
 #include <ButtonCommand.h>
 #include <SerialShell.h>
-#include <EthShield.h>
+#include <EthManager.h>
 
 //comment to prevent adding the SerialShell
 #define MOTEINO_HAS_SERIAL
-#define DEBUG 1
-#define DEBUG2 1
 
 #define REPLY 1
 #define ENABLE_IDLE_STBY_RF 0
@@ -118,23 +116,14 @@ void UpdateTeleIC(char *Data){
 
   memset(MessageServeur,'\0',100);
 
-   //if (DEBUG==1) { Serial.print("   [RX_RSSI:");Serial.print(radio.RSSI);Serial.print("]"); }
-   if (DEBUG==1) Serial.println();
-
     memset(Inst,'\0',20);
     parseMessage(Data,Inst,5);
-    if (DEBUG==1) Serial.print("IINST :");
-    if (DEBUG==1) Serial.println(Inst);
 
     memset(hchp,'\0',20);
     parseMessage(Data,hchp,6);
-    if (DEBUG==1) Serial.print("HCHP :");
-    if (DEBUG==1) Serial.println(hchp);
 
     memset(hchc,'\0',20);
     parseMessage(Data,hchc,7);
-    if (DEBUG==1) Serial.print("HCHC :");
-    if (DEBUG==1) Serial.println(hchc);
 
     sprintf(MessageServeur,"field4=%s&field5=%s&field6=%s",hchp,hchc,Inst);
 
@@ -163,8 +152,6 @@ void UpdateTempInt(char *Data){
 void UpdateMeteo(char *Data){
 
   char MessageServeur[100]="";
-  if (DEBUG==1) Serial.print("Meteo :");
-  if (DEBUG==1) Serial.println(Data);
   char Light[20];
   char BPV[20];
   char TV[20];
@@ -186,8 +173,7 @@ void UpdateMeteo(char *Data){
   else
     sprintf(MessageServeur,"field1=%s&field2=%s&field3=%s&field4=%s&field5=%s&field8=%s",BPV,TV,HV,RV,Light,WS);
 
-  if (DEBUG==1) Serial.println(MessageServeur);
-    updateThingSpeak(MessageServeur,writeAPIKeyMeteo);
+  updateThingSpeak(MessageServeur,writeAPIKeyMeteo);
 
 }
 
