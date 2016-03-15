@@ -2,6 +2,9 @@
 #define MOTEINO_SERIALSHELL_H
 
 #include<Arduino.h>
+
+class SerialShell;
+
 #include <Moteino.h>
 
 class SerialShell{
@@ -28,9 +31,6 @@ void handleSerialMessage(char *message);
 
 //time in ms at which we stop burning data to rfm69
 unsigned long  burn_end=0;
-
-//10 ms between each burn
-unsigned long burn_delay=10;
 
 //next time we burn
 unsigned long burn_next=0;

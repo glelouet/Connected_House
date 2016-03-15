@@ -43,7 +43,6 @@ void setup()
 }
 
 unsigned long last_send=0;
-unsigned long delay_ms=5000;
 
 void sendTemp(){
 	uint32_t id= moteino.getId();
@@ -61,7 +60,7 @@ void loop(){
   sh.loop();
   #endif
   unsigned long time = millis();
-  if(moteino.radio.getState()==TRANSMIT && time-last_send >delay_ms) {
+  if(moteino.radio.getState()==TRANSMIT && time-last_send >moteino.params.probePeriod) {
 		sendTemp();
     last_send = time;
   }

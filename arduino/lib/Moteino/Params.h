@@ -38,6 +38,8 @@ struct Params{
     char version[4];
 
   	byte debug=DEBUG_FULL;
+
+		unsigned long probePeriod=5000;//5s between probe by default
 };
 
 #endif

@@ -38,8 +38,6 @@ public :
 
   void loop();
 
-  EthernetClient client;
-
   //send data with format id:probeId:value to the php server
   void sendProbeData(char *id, char*probeID, char*value);
 
@@ -47,6 +45,11 @@ public :
 
 
 private:
+
+  // self_management when idle
+  void loop_idle();
+
+  EthernetClient client;
 
   Moteino *m;
 

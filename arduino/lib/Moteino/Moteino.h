@@ -12,8 +12,11 @@
 #include <SPIFlash.h>
 #include <OneWire.h>
 #include <EEPROM.h>
-#include <Params.h>
 #include <inttypes.h>
+
+class Moteino;
+
+#include <Params.h>
 
 #include <RF69Manager.h>
 
@@ -25,7 +28,7 @@
 
 // version of the code is
 // abc where a, b, c in {0, 1..9, a..y, z}
-#define MOTEINO_VERSION "005"
+#define MOTEINO_VERSION "006"
 
 class Moteino {
 	public:

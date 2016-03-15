@@ -8,7 +8,7 @@ void GWManager::init(Moteino *moteino, const char *url, uint16_t port){
   if(hasEthernet) {
     client.stop();
     Ethernet.select(ETHERNET_PIN);
-    Serial.println("acquiring DHCP, this may take some time");
+    Serial.println(F("acquiring DHCP, this may take some time"));
     Ethernet.begin(ethMac);
     Serial.print(F("My IP address: "));
     for (byte thisByte = 0; thisByte < 4; thisByte++) {
@@ -24,8 +24,11 @@ void GWManager::init(Moteino *moteino, const char *url, uint16_t port){
 }
 
 void GWManager::loop(){
+  //Serial.println(F("starting GWManager loop"));
+  boolean activity=false;
   if(m->radio.hasRcv()
       && strncmp( ((char *) m->radio.getData()), "SEND", strlen("SEND"))==0) {
+    activity=true;
     char * transmit = ((char *)m->radio.getData())+strlen("SEND");
     char id[20], probeID[4], value[30];
     token(transmit, id, 0, 20);
@@ -33,25 +36,73 @@ void GWManager::loop(){
     token(transmit, value, 2, 30);
     sendProbeData(id, probeID, value);
   }
+  if(client.connected() && client.available()>0){
+    activity=true;
+    Serial.print(F("discarding data from eth "));
+    Serial.println(client.available());
+    while(client.available()>0){
+      unsigned char buff[50];
+      int read = client.read(buff, 50);
+      //Serial.print(read);
+      //Serial.print(F(" : "));
+      //Serial.println(((char*)buff));
+    }
+    delay(10);//can crash here if not delay ?
+    Serial.println(F("emptied the buffer"));
+  }
+  if(!activity) {
+    loop_idle();
+  }
+}
+
+void GWManager::loop_idle(){
+  switch (Ethernet.maintain()) {
+    case DHCP_CHECK_RENEW_FAIL:
+      //renewed fail
+      Serial.println(F("Error: DHCP renewed fail"));
+      break;
+    case 2:
+      //renew
+      Serial.println(F("DHCP renew ok"));
+      break;
+    case 3:
+      //rebind fail
+      Serial.println(F("Error: DHCP rebind fail"));
+      break;
+    case 4:
+      //rebind
+      Serial.println(F("DHCP rebind ok"));
+      break;
+    default:
+      //nothing happened
+      break;
+  }
 }
 
 void GWManager::sendProbeData(char *id, char *probeID, char *value) {
-  client.stop();
-  if(client.connect(m_url, m_port)) {
-    client.print("GET /test.php?id=");
+  if(!client.connected()){
+    Serial.println("trying to connect");
+    client.connect(m_url, m_port);
+  }
+  if(client.connected()) {
+    Serial.println(F("sending data on eth"));
+    client.print(F("GET /test.php?id="));
     client.print(id);
-    client.print("&pb=");
+    client.print(F("&pb="));
     client.print(probeID);
-    client.print("&val=");
+    client.print(F("&val="));
     client.print(value);
-    client.println(" HTTP/1.1");
-    client.print("Host: ");
+    client.println(F(" HTTP/1.1"));
+    client.print(F("Host: "));
     client.println(m_url);
     client.println();
-    client.flush();
   } else {
     Serial.print(F("could not connect to server "));
-    Serial.println(m_url);
+    Serial.print(m_url);
+    Serial.print(F(":"));
+    Serial.println(m_port);
+    Serial.print(F("status : "));
+    Serial.println(client.status());
   }
 }
 
@@ -75,7 +126,7 @@ void GWManager::updateThingSpeak(char* tsData, char *chanel) {
 
     client.flush();
   }
-  else Serial.println("PB!!! Conex");
+  else Serial.println(F("PB!!! Conex"));
 
   client.stop();
 

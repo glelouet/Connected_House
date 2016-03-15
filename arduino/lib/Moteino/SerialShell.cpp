@@ -37,7 +37,7 @@ void SerialShell::loop(){
   long time= millis();
   if(time<burn_end && time>burn_next){
     m->radio.sendBC("coucou j'ai chaud");
-    burn_next+=burn_delay;
+    burn_next+=m->params.probePeriod;
     if(burn_next<time) burn_next=time+1;
   }
 }
@@ -53,6 +53,7 @@ void SerialShell::printParams(){
     Serial.print(' ');
     Serial.print((byte)m->netparams.rdKey[i]);
   } Serial.println();
+  Serial.print(F("probePeriod="));Serial.print(m->params.probePeriod);Serial.println(F("ms"));
 }
 
 void SerialShell::handleSerialMessage(char *message) {
@@ -103,8 +104,8 @@ void SerialShell::handleSerialMessage(char *message) {
     long burn_t = atol(message+strlen("burn "));
     burn_next=0;
     burn_end=burn_t+millis();
-  } else if(strncmp(message, "burnd=", strlen("burnd="))==0) {
-    burn_delay=atol(message+strlen("burnd="));
+  } else if(strncmp(message, "pbp=", strlen("pbp="))==0) {
+    m->params.probePeriod=atol(message+strlen("pbp="));
   } else {
     Serial.print(F("discarding "));
     Serial.println(message);
