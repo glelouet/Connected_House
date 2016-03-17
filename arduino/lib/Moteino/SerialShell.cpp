@@ -44,7 +44,7 @@ void SerialShell::loop(){
 
 void SerialShell::printParams(){
   Serial.print(F("version="));Serial.println(m->params.version);
-  Serial.print(F("debug="));Serial.println(m->params.debug);
+  Serial.print(F("debug[dbg]="));Serial.println(m->params.debug);
   Serial.print(F("paired="));Serial.println(m->netparams.paired);
   Serial.print(F("rdNet="));Serial.println(m->netparams.rdNet);
   Serial.print(F("rdIP="));Serial.println(m->netparams.rdIP);
@@ -53,7 +53,7 @@ void SerialShell::printParams(){
     Serial.print(' ');
     Serial.print((byte)m->netparams.rdKey[i]);
   } Serial.println();
-  Serial.print(F("probePeriod="));Serial.print(m->params.probePeriod);Serial.println(F("ms"));
+  Serial.print(F("probePeriod[pbp]="));Serial.print(m->params.probePeriod);Serial.println(F("ms"));
 }
 
 void SerialShell::handleSerialMessage(char *message) {

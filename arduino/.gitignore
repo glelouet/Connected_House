@@ -1,8 +1,0 @@
-.pioenvs
-lib/*_ID*
-.settings
-.project
-.cproject
-.clang_complete
-.gcc-flags.json
-

@@ -274,4 +274,5 @@ void Moteino::loop() {
   }
   radioLed();
   loopLed();
+  delay(10);//test
 }
