@@ -24,11 +24,9 @@ signed long next;
 void setup() {
 
   Serial.begin(9600);
-  Serial.println("Serial initialized");
 
   uint8_t mac[6] = {0x00,0x01,0x02,0x03,0x04,0x05};
   Ethernet.begin(mac);
-  Serial.println("eth began");
 
   Serial.print("localIP: ");
   Serial.println(Ethernet.localIP());
@@ -50,7 +48,7 @@ void loop() {
       Serial.println("Client connect");
       // replace hostname with name of machine running tcpserver.pl
 //      if (client.connect("server.local",5000))
-      if (client.connect("tarzan.info.emn.fr/test.php",5000))
+      if (client.connect(IPAddress(192,168,0,1),5000))
         {
           Serial.println("Client connected");
           client.println("DATA from Client");

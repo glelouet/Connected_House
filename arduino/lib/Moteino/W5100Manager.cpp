@@ -13,8 +13,8 @@ void GWManager::init(Moteino *moteino, const char *url, uint16_t port){
     Serial.print(F("My IP address: "));
     for (byte thisByte = 0; thisByte < 4; thisByte++) {
       // print the value of each byte of the IP address:
-      Serial.print(Ethernet.localIP()[thisByte], DEC);
-      Serial.print(F("."));
+      Serial.print(Ethernet.localIP()[thisByte], HEX);
+      if(thisByte!=4) Serial.print(F("."));
     }
     Serial.println();
 
@@ -64,9 +64,10 @@ void GWManager::checkEth(){
       Serial.println(F("reseting eth"));
       client.stop();
       Ethernet.begin(ethMac);
-      Serial.println(F("reseting eth ok"));
-      Serial.println("trying to connect");
+      Serial.println("trying to re connect post reset");
       client.connect(m_url, m_port);
+      Serial.print("re connection result ");
+      Serial.println(client.connected());
     }
   }
   Serial.println("eth check performed");
