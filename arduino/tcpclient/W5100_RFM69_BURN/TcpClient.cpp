@@ -22,7 +22,7 @@
 
 EthernetClient client;
 RFM69_ATC radio;
-unsigned long send_delay = 2000;
+unsigned long send_delay = 1000;
 unsigned long next = 0;
 size_t buff_size = 500;
 
@@ -76,5 +76,7 @@ void loop() {
       buffer[read] = '\0';
       Serial.println(read);
     }
+  }
+  if (radio.receiveDone()) {
   }
 }
