@@ -17,12 +17,12 @@
  */
 #include <Arduino.h>
 
-#include <UIPEthernet.h>
-#include <utility/enc28j60.h>
+#include <Ethernet.h>
+#include <utility/w5100.h>
 
 
 EthernetClient client;
-unsigned long send_delay=1000;
+unsigned long send_delay=2000;
 unsigned long next = 0 ;
 size_t buff_size=500;
 
@@ -31,6 +31,7 @@ void setup() {
   Serial.begin(9600);
   Serial.println("Serial initialized");
 
+  Ethernet.select(4);
   byte mac[6] = { 0x00, 0x50, 0x56, 0x13, 0x37, 0x20 };
   Ethernet.begin(mac);
   Serial.print(F("My IP address: "));
@@ -40,6 +41,8 @@ void setup() {
     if(idx!=3)Serial.print(F("."));
   }
   Serial.println();
+  W5100.setRetransmissionTime(2000); //where each unit is 100us, so 0x07D0 (decimal 2000) means 200ms.
+  W5100.setRetransmissionCount(3); //That gives me a 3 second timeout on a bad server connection.
 }
 
 void loop() {

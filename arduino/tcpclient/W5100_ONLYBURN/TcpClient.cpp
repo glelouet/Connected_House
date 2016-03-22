@@ -19,12 +19,12 @@
 
 #include <Ethernet.h>
 #include <utility/w5100.h>
-//#include <UIPEthernet.h>
-//#include <utility/enc28j60.h>
 
 
 EthernetClient client;
+unsigned long send_delay=2000;
 unsigned long next = 0 ;
+size_t buff_size=500;
 
 void setup() {
 
@@ -37,7 +37,7 @@ void setup() {
   Serial.print(F("My IP address: "));
   for (size_t idx = 0; idx < 4; idx++) {
     // print the value of each byte of the IP address:
-    Serial.print(Ethernet.localIP()[idx], HEX);
+    Serial.print(Ethernet.localIP()[idx], DEC);
     if(idx!=3)Serial.print(F("."));
   }
   Serial.println();
@@ -48,39 +48,27 @@ void setup() {
 void loop() {
   unsigned long time = millis();
   if (next<time) {
-      next += 20000;
-      if(next<=time) next=time+1;
-      Serial.println("Client connect");
-      if (client.connected()){
-        Serial.println("already connected");
-      } else {
-        Serial.println("eth client not connected");
-        Serial.print("connecting results : ");
-        Serial.println(client.connect("tarzan.info.emn.fr",80));
-      }
-      // replace hostname with name of machine running tcpserver.pl
-      // if (client.connect("server.local",5000))
-      Serial.print("sending trame, client connetion status ");
-      Serial.println(client.status());
-      int sent = client.println("GET /test.php HTTP/1.1");
-      Serial.print("sent ");
-      Serial.print(sent);
-      Serial.println(" bytes");
-      sent = client.println(F("Host: tarzan.info.emn.fr"));
-      Serial.print("sent ");
-      Serial.print(sent);
-      Serial.println(" bytes");
-      client.println();
+    Ethernet.maintain();
+    next += send_delay;
+    if(next<=time) next=time+1;
+    Serial.println("request time !");
+    if (client.connected()){
+      Serial.println("already connected");
+    } else {
+      Serial.print("connecting results : ");
+      Serial.println(client.connect("tarzan.info.emn.fr",80));
+    }
+    int sent = client.println("GET /ping.php HTTP/1.1");
+    sent = client.println(F("Host: tarzan.info.emn.fr"));
+    client.println();
   }
   if(client.connected() && client.available()>0){
     Serial.println("client received data  : ");
-    unsigned char buffer[200+1];
+    unsigned char buffer[buff_size+1];
     while(client.available()>0){
-      int  read = client.read(buffer, 200);
+      int  read = client.read(buffer, buff_size);
       buffer[read]='\0';
-      Serial.println((char *)buffer);
+      Serial.println(read);
     }
-    Serial.println("Client disconnect");
-    client.stop();
   }
 }
