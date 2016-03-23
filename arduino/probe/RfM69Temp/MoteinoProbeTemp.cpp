@@ -60,7 +60,7 @@ void loop(){
   sh.loop();
   #endif
   unsigned long time = millis();
-  if(moteino.radio.getState()==TRANSMIT && time-last_send >moteino.params.probePeriod) {
+  if(moteino.radio.getState()==rfm69::TRANSMIT && time-last_send >moteino.params.probePeriod) {
 		sendTemp();
     last_send = time;
   }

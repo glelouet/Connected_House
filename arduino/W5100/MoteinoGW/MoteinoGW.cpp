@@ -22,7 +22,7 @@ char writeAPIKeyElec[] = "c33f1ab16fc77cb03b0fdc7ad11a5735";
 char writeAPIKeyMeteo[] = "OD8OB7F3CWE25CLE";
 
 Moteino moteino;
-ENC28J60Manager gw;
+W5100Manager gw;
 #ifdef MOTEINO_HAS_SERIAL
 SerialShell sh;
 #endif

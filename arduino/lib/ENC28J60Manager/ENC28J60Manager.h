@@ -1,13 +1,15 @@
 #ifndef ARDUINO_LIB_Moteino_W5100Manager_H_
 #define ARDUINO_LIB_Moteino_W5100Manager_H_
 
-#include <Arduino.h>
-#include <Ethernet.h>
-#include <utility/w5100.h>
+class ENC28J60Manager;
 
 #include <Moteino.h>
+#include <UIPEthernet.h>
 
-class W5100Manager {
+class ENC28J60Manager {
+
+private:
+  static const unsigned long start_delay = 1000;
 
 public:
   // extract the tokenNb-th token from Message into response, where tokens are
