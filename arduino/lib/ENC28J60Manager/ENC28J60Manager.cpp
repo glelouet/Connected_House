@@ -54,19 +54,13 @@ void ENC28J60Manager::loop() {
 }
 
 void ENC28J60Manager::checkEth() {
-  Serial.println("eth check start");
   if (!client.connected()) {
-    Serial.println("trying to connect");
     client.connect(m_url, m_port);
     if (!client.connected()) {
-      Serial.println(F("reseting eth"));
       client.stop();
       delay(start_delay);
       Ethernet.begin(ethMac);
-      Serial.println("trying to re connect post reset");
       client.connect(m_url, m_port);
-      Serial.print("re connection result ");
-      Serial.println(client.connected());
     }
   }
   Serial.println("eth check performed");
