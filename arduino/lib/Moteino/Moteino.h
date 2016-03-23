@@ -20,9 +20,6 @@ class Moteino;
 
 #include <RF69Manager.h>
 
-// request here to be able to load the libs in other classes
-#include <Ethernet.h>
-#include <RFM69_ATC.h>
 #include <WirelessHEX69.h>
 
 using rfm69::RF69Manager;

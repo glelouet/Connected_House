@@ -2,10 +2,10 @@
 #define ARDUINO_LIB_Moteino_W5100Manager_H_
 
 #include <Arduino.h>
-
 #include <Ethernet.h>
-#include <Moteino.h>
 #include <utility/w5100.h>
+
+#include <Moteino.h>
 
 class W5100Manager {
 
