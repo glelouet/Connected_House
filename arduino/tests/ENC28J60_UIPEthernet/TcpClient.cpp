@@ -18,7 +18,6 @@
 #include <Arduino.h>
 
 #include <UIPEthernet.h>
-#include <utility/enc28j60.h>
 
 EthernetClient client;
 unsigned long send_delay = 1000;
@@ -30,21 +29,18 @@ void setup() {
   Serial.begin(9600);
   Serial.println("Serial initialized");
 
-  byte mac[6] = {0x00, 0x50, 0x56, 0x13, 0x37, 0x20};
   delay(1000); // we need to wait before initializing ethernet
-  Serial.println("starting ethernet");
+  byte mac[6] = {0x00, 0x50, 0x56, 0x13, 0x37, 0x20};
   Ethernet.begin(mac);
   Serial.print(F("My IP address: "));
   for (size_t idx = 0; idx < 4; idx++) {
     // print the value of each byte of the IP address:
     Serial.print(Ethernet.localIP()[idx], DEC);
-    if (idx != 3)
-      Serial.print(F("."));
+    if (idx != 3) Serial.print(F("."));
   }
   Serial.println();
   delay(1000);
   next = millis() + send_delay;
-  Serial.println("end setup");
 }
 
 void loop() {
@@ -52,8 +48,7 @@ void loop() {
   if (next < time) {
     Ethernet.maintain();
     next += send_delay;
-    if (next <= time)
-      next = time + 1;
+    if (next <= time) next = time + 1;
     if (client.connected()) {
       Serial.println("already connected");
     } else {

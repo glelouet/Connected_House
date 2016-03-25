@@ -7,13 +7,6 @@
 
 #include <Moteino.h>
 
-Moteino::Moteino()
-    : owire(ONEWIRE_PIN),
-      flash(FLASH_PIN, 0xEF30) // 0xEF30 for windbond 4mbit flash
-{}
-
-Moteino::~Moteino() {}
-
 void Moteino::setup() {
   strcpy(params.version, MOTEINO_VERSION);
   pinMode(LED_PIN, OUTPUT);
@@ -24,7 +17,6 @@ void Moteino::setup() {
   // flash gives us its unique id so we can translate it to a *mac* address for
   // the RF69
   // we then initialize the RF69 using those parameters
-  init_flash();
   radio.init(&netparams);
   radio.findNet();
 }
@@ -89,17 +81,6 @@ void Moteino::writeEEPROM() {
     EEPROM.update(paramsOffset + t, *((char *)&params + t));
   if (debug(DEBUG_INFO))
     Serial.println(F("EEPROM write OK"));
-}
-
-void Moteino::init_flash() {
-  if (flash.initialize()) {
-    uint8_t *uniq_id = flash.readUniqueId();
-    flashId = 0;
-    for (byte i = 4; i < 8; i++) {
-      flashId = flashId << 8 | uniq_id[i];
-    }
-  } else if (debug(DEBUG_WARN))
-    Serial.println(F("SPI Flash Init FAIL!"));
 }
 
 ///////////////////////////////////////////////////////////
@@ -267,9 +248,6 @@ void Moteino::loop() {
   if (radio.hasRcv()) {
     if (strcmp(RD_LED_DISCO, (char *)radio.getData()) == 0) {
       rdLedDisco();
-    } else {
-      // check if radio received rom to write on the flash, then flash it
-      CheckForWirelessHEX(radio.getRadio(), flash, true);
     }
   }
   radioLed();

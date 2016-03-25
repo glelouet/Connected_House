@@ -10,17 +10,14 @@
 
 #include <Arduino.h>
 #include <EEPROM.h>
-#include <OneWire.h>
-#include <SPIFlash.h>
 #include <inttypes.h>
+#include <SPI.h>
 
 class Moteino;
 
 #include <Params.h>
 
 #include <RF69Manager.h>
-
-#include <WirelessHEX69.h>
 
 using rfm69::RF69Manager;
 
@@ -29,9 +26,9 @@ using rfm69::RF69Manager;
 #define MOTEINO_VERSION "006"
 
 class Moteino {
+
 public:
-  Moteino();
-  ~Moteino();
+
   void setup();
   // call children setup() or initialize() or whatsoever
 
@@ -80,12 +77,12 @@ private:
 
 private:
   // 1-wire bus ( http://playground.arduino.cc/Learning/OneWire )
-  byte ONEWIRE_PIN = 3;
-  OneWire owire;
+  //byte ONEWIRE_PIN = 3;
+  //OneWire owire;
 
   // onewire address of the DS12B20 if exists
   // DS12B30 = temperature probe
-  byte DS18B20_PIN = 0x28;
+  //byte DS18B20_PIN = 0x28;
 
   //////////////////////////////////////////////////////////
   // RF69 (wireless radio) chip
@@ -112,24 +109,6 @@ private:
   unsigned long radio_next_led = 0;
   unsigned long radio_count_delay = 3000;
   unsigned long radio_ledcount_duration = 1500;
-
-  //////////////////////////////////////////////////////////
-
-private:
-  uint32_t flashId = 0;
-
-public:
-#ifdef __AVR_ATmega1284P__
-  byte FLASH_PIN = 23; // FLASH SS on D23
-#else
-  byte FLASH_PIN = 8; // FLASH SS on D8
-#endif
-  // self flasher
-  SPIFlash flash;
-  // init the flash part
-  void init_flash();
-
-  uint32_t getId() { return flashId; }
 
   static char *ftoa(double f, char *a, int precision) {
     long p[] = {0, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000};

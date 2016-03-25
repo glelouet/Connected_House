@@ -20,9 +20,8 @@
 #include <Ethernet.h>
 #include <utility/w5100.h>
 
-
 EthernetClient client;
-unsigned long send_delay=2000;
+unsigned long send_delay=1000;
 unsigned long next = 0 ;
 size_t buff_size=500;
 
@@ -38,11 +37,12 @@ void setup() {
   for (size_t idx = 0; idx < 4; idx++) {
     // print the value of each byte of the IP address:
     Serial.print(Ethernet.localIP()[idx], DEC);
-    if(idx!=3)Serial.print(F("."));
+    if (idx != 3) Serial.print(F("."));
   }
   Serial.println();
   W5100.setRetransmissionTime(2000); //where each unit is 100us, so 0x07D0 (decimal 2000) means 200ms.
   W5100.setRetransmissionCount(3); //That gives me a 3 second timeout on a bad server connection.
+  next = millis() + send_delay;
 }
 
 void loop() {
@@ -50,8 +50,7 @@ void loop() {
   if (next<time) {
     Ethernet.maintain();
     next += send_delay;
-    if(next<=time) next=time+1;
-    Serial.println("request time !");
+    if(next <= time) next = time+1;
     if (client.connected()){
       Serial.println("already connected");
     } else {
