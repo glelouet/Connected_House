@@ -10,8 +10,8 @@
 
 #include <Arduino.h>
 #include <EEPROM.h>
-#include <inttypes.h>
 #include <SPI.h>
+#include <inttypes.h>
 
 class Moteino;
 
@@ -28,12 +28,8 @@ using rfm69::RF69Manager;
 class Moteino {
 
 public:
-
   void setup();
   // call children setup() or initialize() or whatsoever
-
-  // return true if we debug at given level
-  boolean debug(int level);
 
   //////////////////////////////////////////////////////////////////
   // serial port
@@ -77,12 +73,12 @@ private:
 
 private:
   // 1-wire bus ( http://playground.arduino.cc/Learning/OneWire )
-  //byte ONEWIRE_PIN = 3;
-  //OneWire owire;
+  // byte ONEWIRE_PIN = 3;
+  // OneWire owire;
 
   // onewire address of the DS12B20 if exists
   // DS12B30 = temperature probe
-  //byte DS18B20_PIN = 0x28;
+  // byte DS18B20_PIN = 0x28;
 
   //////////////////////////////////////////////////////////
   // RF69 (wireless radio) chip

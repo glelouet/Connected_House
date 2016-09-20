@@ -38,9 +38,6 @@ void W5100Manager::loop() {
   }
   if (client.connected() && client.available() > 0) {
     activity = true;
-    Serial.print(F("discarding "));
-    Serial.print(client.available());
-    Serial.println(F(" bytes from eth rcv buffer"));
     while (client.available() > 0) {
       unsigned char buff[200 + 1];
       int read = client.read(buff, 200);
@@ -48,7 +45,6 @@ void W5100Manager::loop() {
       Serial.print(F(" "));
       // Serial.println(((char*)buff));
     }
-    Serial.println(F("eth rcv buffer empty"));
   }
   if (!activity) {
     loop_idle();
@@ -56,21 +52,15 @@ void W5100Manager::loop() {
 }
 
 void W5100Manager::checkEth() {
-  Serial.println("eth check start");
   if (!client.connected()) {
-    Serial.println("trying to connect");
     client.connect(m_url, m_port);
     if (!client.connected()) {
-      Serial.println(F("reseting eth"));
       client.stop();
       Ethernet.begin(ethMac);
-      Serial.println("trying to re connect post reset");
       client.connect(m_url, m_port);
-      Serial.print("re connection result ");
       Serial.println(client.connected());
     }
   }
-  Serial.println("eth check performed");
 }
 
 void W5100Manager::loop_idle() {
@@ -100,7 +90,6 @@ void W5100Manager::loop_idle() {
 void W5100Manager::sendProbeData(char *id, char *probeID, char *value) {
   checkEth();
   if (client.connected()) {
-    Serial.println(F("sending data on eth"));
     client.print(F("GET /test.php?id="));
     client.print(id);
     client.print(F("&pb="));

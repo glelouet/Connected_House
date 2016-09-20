@@ -21,8 +21,6 @@ void Moteino::setup() {
   radio.findNet();
 }
 
-boolean Moteino::debug(int lvl) { return params.debug >= lvl; }
-
 // the cheksum is a series of xor on the params : add[o]^add[1]^..
 // the xor is stored at index 0, sor P ^ chk(P) should result in 0
 boolean Moteino::chkNetEEPROM() {
@@ -30,7 +28,7 @@ boolean Moteino::chkNetEEPROM() {
   for (size_t index = 0; index < sizeof(netparams); ++index) {
     chk = chk ^ EEPROM[index];
   }
-  if (chk != 0 && debug(DEBUG_WARN)) {
+  if (chk != 0) {
     Serial.println(F("netparams check error"));
   }
   return chk == 0;
@@ -50,8 +48,7 @@ void Moteino::chkSetNet() {
 }
 
 boolean Moteino::loadEEPROM() {
-  if (debug(DEBUG_INFO))
-    Serial.println(F("read EEPROM"));
+  Serial.println(F("read EEPROM"));
   if (chkNetEEPROM()) {
     for (size_t t = 0; t < sizeof(netparams); t++)
       *((char *)&netparams + t) = EEPROM.read(t);
@@ -62,11 +59,9 @@ boolean Moteino::loadEEPROM() {
       EEPROM.read(paramsOffset + 2) == MOTEINO_VERSION[2]) {
     for (unsigned int t = 0; t < sizeof(params); t++)
       *((char *)&params + t) = EEPROM.read(sizeof(netparams) + t);
-    if (debug(DEBUG_INFO))
-      Serial.println(F("read EEPROM ok"));
+    Serial.println(F("read EEPROM ok"));
   } else {
-    if (debug(DEBUG_WARN))
-      Serial.println(F("bad EEPROM"));
+    Serial.println(F("bad EEPROM"));
     return false;
   }
   return true;
@@ -79,8 +74,6 @@ void Moteino::writeEEPROM() {
   size_t paramsOffset = sizeof(netparams);
   for (unsigned int t = 0; t < sizeof(params); t++)
     EEPROM.update(paramsOffset + t, *((char *)&params + t));
-  if (debug(DEBUG_INFO))
-    Serial.println(F("EEPROM write OK"));
 }
 
 ///////////////////////////////////////////////////////////
@@ -93,9 +86,6 @@ void Moteino::rdRandom() {
   for (int i = 0; i < RF69_CRYPT_SIZE; i++)
     netparams.rdKey[i] = random(255);
   writeEEPROM();
-  if (debug(DEBUG_INFO)) {
-    Serial.println(F("randomed network"));
-  }
   radio.findNet();
 }
 

@@ -11,12 +11,15 @@
 // Tested on miniWireless with RFM69 www.anarduino.com/miniwireless
 // Tested on Teensy 3.1 with RF69 on PJRC breakout board
 
-#include <Moteino.h>
-#include <SerialShell.h>
 #include <ENC28J60Manager.h>
+#include <Moteino.h>
 
 // comment to prevent adding the SerialShell
-#define MOTEINO_HAS_SERIAL
+// #define MOTEINO_HAS_SERIAL
+
+#ifdef MOTEINO_HAS_SERIAL
+#include <SerialShell.h>
+#endif
 
 char writeAPIKeyElec[] = "c33f1ab16fc77cb03b0fdc7ad11a5735";
 char writeAPIKeyMeteo[] = "OD8OB7F3CWE25CLE";

@@ -9,7 +9,6 @@ void ENC28J60Manager::init(Moteino *moteino, const char *url, uint16_t port) {
   if (time < start_delay) {
     delay(start_delay - time);
   }
-  Serial.println(F("acquiring DHCP, this may take some time"));
   Ethernet.begin(ethMac);
   Serial.print(F("My IP address: "));
   for (byte thisByte = 0; thisByte < 4; thisByte++) {
@@ -35,10 +34,8 @@ void ENC28J60Manager::loop() {
     sendProbeData(id, probeID, value);
   }
   if (client.connected() && client.available() > 0) {
+    Serial.println(F("data received"));
     activity = true;
-    Serial.print(F("discarding "));
-    Serial.print(client.available());
-    Serial.println(F(" bytes from eth rcv buffer"));
     while (client.available() > 0) {
       unsigned char buff[200 + 1];
       int read = client.read(buff, 200);
@@ -46,7 +43,7 @@ void ENC28J60Manager::loop() {
       Serial.print(F(" "));
       // Serial.println(((char*)buff));
     }
-    Serial.println(F("eth rcv buffer empty"));
+    Serial.println();
   }
   if (!activity) {
     loop_idle();
@@ -54,16 +51,18 @@ void ENC28J60Manager::loop() {
 }
 
 void ENC28J60Manager::checkEth() {
+  Serial.println(F("checkEth"));
   if (!client.connected()) {
+    Serial.println(F("client not connected"));
     client.connect(m_url, m_port);
     if (!client.connected()) {
+      Serial.println(F("client not connected AGAIN"));
       client.stop();
       delay(start_delay);
       Ethernet.begin(ethMac);
       client.connect(m_url, m_port);
     }
   }
-  Serial.println("eth check performed");
 }
 
 void ENC28J60Manager::loop_idle() {
@@ -91,9 +90,9 @@ void ENC28J60Manager::loop_idle() {
 }
 
 void ENC28J60Manager::sendProbeData(char *id, char *probeID, char *value) {
+  Serial.println(F("sendProbeData"));
   checkEth();
   if (client.connected()) {
-    Serial.println(F("sending data on eth"));
     client.print(F("GET /test.php?id="));
     client.print(id);
     client.print(F("&pb="));
@@ -111,6 +110,7 @@ void ENC28J60Manager::sendProbeData(char *id, char *probeID, char *value) {
     Serial.print(F(":"));
     Serial.println(m_port);
   }
+  Serial.println(F("exit send probe data"));
 }
 
 // Update ThingSpeak with the date on the right chanel

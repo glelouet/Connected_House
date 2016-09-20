@@ -8,16 +8,19 @@ class SPIFlashManager;
 
 class SPIFlashManager {
 
+public:
+  SPIFlashManager();
+
 private:
   uint32_t flashId = 0;
 
-  #ifdef __AVR_ATmega1284P__
-    byte FLASH_PIN = 23; // FLASH SS on D23
-  #else
-    byte FLASH_PIN = 8; // FLASH SS on D8
-  #endif
-    // self flasher
-    SPIFlash flash;
+#ifdef __AVR_ATmega1284P__
+  byte FLASH_PIN = 23; // FLASH SS on D23
+#else
+  byte FLASH_PIN = 8; // FLASH SS on D8
+#endif
+  // self flasher
+  SPIFlash flash;
 
 public:
   // init the flash part
@@ -26,6 +29,6 @@ public:
   void loop();
 
   uint32_t getId() { return flashId; }
-}
+};
 
 #endif
