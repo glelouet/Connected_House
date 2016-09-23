@@ -12,8 +12,28 @@ void ModuleLink::init() {
     next->init();
 }
 
-void setup() { modules.init(); }
+void setup() {
+  Serial.begin(9600);
+  modules.init();
+
+  Serial.print(F("setup with "));
+  Serial.print(modules.nbChildren());
+  Serial.println(F(" modules"));
+}
 
 void loop() { modules.loop(); }
+
+void ModuleLink::append(ModuleLink *element) {
+  if (next)
+    next->append(element);
+  else
+    next = element;
+}
+
+int ModuleLink::nbChildren() {
+  if (next)
+    return next->nbChildren() + 1;
+  return 0;
+}
 
 ModuleLink modules;

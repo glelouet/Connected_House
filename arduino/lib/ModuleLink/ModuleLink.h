@@ -4,16 +4,14 @@
 
 #include <Arduino.h>
 
-class ModuleLink;
-
 class ModuleLink {
 
 protected:
-  ModuleLink *next = NULL;
-
   virtual void doLoop(){};
 
   virtual void doInit(){};
+
+  ModuleLink *next = NULL;
 
 public:
   void loop();
@@ -21,6 +19,8 @@ public:
   void init();
 
   void append(ModuleLink *element);
+
+  int nbChildren();
 };
 
 extern ModuleLink modules;
