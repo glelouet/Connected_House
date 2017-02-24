@@ -1,9 +1,0 @@
-*.o
-*.gch
-.travis.yml
-*_ID*
-.pioenvs/
-.project
-*.json
-.clang_complete
-.tags
