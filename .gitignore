@@ -1,3 +1,5 @@
-*.py[cod]
-Django_connected/connected_house/db.sqlite3
-*~
+.tmp
+.pio*
+.clang_complete
+.gcc-flags.json
+
