@@ -16,15 +16,33 @@ La production de code C++ demande l'utilisation d'outils particuliers. Moteino p
 
 \chapter{Liens utiles}
 
-\href{https://github.com/glelouet/arduino}{le git du projet}
+\href{https://github.com/glelouet/Moteino}{le git du projet}
 
 \href{http://platformio.org/}{Le site de platformio}
+
+\section{Organisation du projet}
+
+\subsection{Code source}
+
+Le répetoire src/ contient trois répertoires:
+\begin{description}
+\item[src/main] contient les sources principaux à installer sur les chipsets. Chaque répertoire contient un module à installer sur un Moteino.
+\item[src/lib] contient les librairies que nous développons, utilisées dans les main.
+\item[src/ext] contient le librairies que nous avons importées, aprè d'éventuelles modifications, depuis d'autres sites.
+\item[src/test] Contient les tests (pas utilisé pour l'instant)
+\end{description}
+
+\subsection{Documentation}
+
+Le répertoire doc/ contient la documentation de ce projet, en particulier ce fichier.
 
 \chapter{Installation des outils}
 
 \section{Gestionnaire de version : git}
 
 \section{Interface graphique : Atom/Platformio}
+
+J'utilise pio pour le déploiement en ligne de commande, ça me parraissait plus pratique d'utiliser l'IDE qui aurait une intégration native avec les fichiers de configuration. Cependant d'autres IDE peuvent surement etre utilisés.
 
 \subsection{editeur Atom}
 
@@ -35,10 +53,8 @@ Télécharger atom sur \href{https://atom.io/}{le site officiel}
 
 Le plug-in Plaformio pour Atom permet le déploement rapide depuis l'éditeur des binaires sur les chipsets.
 
-\chapter{Description du code}
+\chapter{Coder le Moteino}
 
 \section{Architecture du moteino}
-
-\section{}
 
 \end{document}
