@@ -26,6 +26,8 @@ ButtonCommand bc;
 SerialShell sh;
 #endif
 
+///////////////////////////////////////////////////////////////
+
 SPIFlashManager flashm;
 
 char buff[20];
