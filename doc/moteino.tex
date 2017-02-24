@@ -12,7 +12,7 @@
 Le Moteino est un ordinateur de très petite taille et peu cher. Il est basé sur l'Arduino, très modulaire. 
 
 Le but de ce projet est de prendre en main l'architecture embarquée du Moteino : produire du code C++ à installer sur un Moteino, mais surtout comprendre comment manipuler correctement cette architecture.
-La production de code C++ demande l'utilisation d'outils particuliers. Moteino propose un IDE minimaliste qui ne convient pas aux projets industriels, nous utilisons donc platformio pour automatiser la gestion des librairies, compiler et envoyer le code sur les chipsets.
+La production de code C++ demande l'utilisation d'outils particuliers. Arduino propose un IDE minimaliste qui ne convient pas aux projets industriels, nous utilisons donc platformio pour automatiser la gestion des librairies, compiler et envoyer le code sur les chipsets.
 
 \chapter{Liens utiles}
 
@@ -36,22 +36,26 @@ Le répetoire src/ contient trois répertoires:
 
 Le répertoire doc/ contient la documentation de ce projet, en particulier ce fichier.
 
-\chapter{Installation des outils}
+\section{Outils de développement}
 
-\section{Gestionnaire de version : git}
+\subsection{Gestionnaire de version : git}
 
-\section{Interface graphique : Atom/Platformio}
+\subsection{Interface graphique : Atom/Platformio}
 
 J'utilise pio pour le déploiement en ligne de commande, ça me parraissait plus pratique d'utiliser l'IDE qui aurait une intégration native avec les fichiers de configuration. Cependant d'autres IDE peuvent surement etre utilisés.
 
-\subsection{editeur Atom}
+\subsubsection{editeur Atom}
 
 Atom est un éditeur de texte hautement modulaire.
 Télécharger atom sur \href{https://atom.io/}{le site officiel}
 
-\subsection{Plug-in Platformio}
+\subsubsection{Plug-in Platformio}
 
 Le plug-in Plaformio pour Atom permet le déploement rapide depuis l'éditeur des binaires sur les chipsets.
+
+\subsection{outils en ligne de commande : pio}
+
+Platformio met à disposition une commande pour compiler automatiquement le code, pio.
 
 \chapter{Coder le Moteino}
 
