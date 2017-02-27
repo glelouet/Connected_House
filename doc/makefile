@@ -3,7 +3,7 @@
 all: moteino.pdf
 
 %.pdf: %.tex
-	pdflatex $<
+	pdflatex $< && pdflatex $<
 
 clean:
-	@ rm -rf *.aux *.log *.out
+	@ rm -rf *.aux *.log *.maf *.mtc *.mtc* *.out *.toc 

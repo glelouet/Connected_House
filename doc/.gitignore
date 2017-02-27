@@ -1,4 +1,7 @@
 
-*.out
-*.log
 *.aux
+*.log
+*.maf
+*.mtc*
+*.out
+*.toc

@@ -1,12 +1,18 @@
-\documentclass{report}
+\documentclass[a4paper]{report}
+\usepackage[margin=20pt]{geometry}
 \usepackage[french]{babel}
 \usepackage[utf8]{inputenc}
 \usepackage{hyperref}
 \usepackage{listings}
+\usepackage{minitoc}
 
 \title{Utilisation du projet Moteino}
 
 \begin{document}
+
+%\maketitle
+\dominitoc
+\tableofcontents
 
 \chapter{Contexte}
 
@@ -17,13 +23,16 @@ La production de code C++ demande l'utilisation d'outils particuliers. Arduino p
 
 
 
-\chapter{Liens utiles}
+\section{Liens utiles}
 
 \href{https://github.com/glelouet/Moteino}{le git du projet}
+
+\href{https://lowpowerlab.com/guide/moteino/}{Le site du fabricant des moteino}
 
 \href{http://platformio.org/}{Le site de platformio}
 
 \chapter{Organisation du projet}
+\minitoc
 
 \section{Code source}
 
@@ -40,6 +49,8 @@ Le répertoire .tmp/ contient entre autre les dépendances gérées par platefor
 \section{Documentation}
 
 Le répertoire doc/ contient la documentation de ce projet, en particulier ce fichier et le code permettant de le générer.
+
+Si make est installé, un appel à make produit la documentaton.
 
 \section{Outils de développement}
 
@@ -65,6 +76,9 @@ Une fois le code téléchargé, il suffit de faire \verb+pio -t upload+ dans un 
 
 \subsubsection{Lecture du port série}
 
+La commande \verb+screen /dev/ttyUSB0+ capture les données sur le port série virtuel \verb+/dev/ttyUSB0+. Elle permet aussi de transmettre des commanes auMoteino (cf librairie serialshell plus loin)\\
+Pour terminer la session : $ctrl+A$, $shift+k$, $y$
+
 \subsection{Interface graphique : Atom/Platformio}
 
 Utilisant pio pour le déploiement en ligne de commande, il est pratique d'utiliser l'IDE correspondant qui a une intégration native avec les fichiers de configuration. Cependant d'autres IDE peuvent surement etre utilisés.
@@ -83,6 +97,7 @@ Pour l'installer suivre \href{http://docs.platformio.org/en/stable/ide/atom.html
 Une fois installé, il faut ouvrir le projet avec \verb+file/open project folder+ et entrer un des répertoires présents dans src/main. Pour installer ce projet il suffit de cliquer à gauche sur la flêche de légende \verb+platformio:upload+ . si l'upoad ne fonctionne pas, il faut s'assurer que le \verb+upload_port+ du fichier platformio.ini correspond bien au port USB du moteino. En cas de multiple pors USB ceux-ci peuvent varier.
 
 \chapter{Programmation du Moteino}
+\minitoc
 
 Le moteino est mono-thread et basé sur une boucle de gestion. Un code destiné au Moteino, ou plus généralement à un Arduino, doit avoir deux fonctions :
 \begin{enumerate}
@@ -192,5 +207,9 @@ Cette librairie lit à chaque loop() les données du port serial et les interpre
 \item[rdsnet] demande au manager de découvrir un réseau
 \item[write] enregistre les paramètres actuels du moteino dans la mémoire
 \end{description}
+
+\section{À faire}
+
+Enlever tous les sleep() En effet ceux-ci peuevnt gèner le fonctionnement des modules. Cependant leur remplacement n'est pas aisé car il n'est pas possible de consever l'état actuel de la fonction dans un module.
 
 \end{document}
