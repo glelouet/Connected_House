@@ -10,10 +10,12 @@
 
 \chapter{Contexte}
 
-Le Moteino est un ordinateur de très petite taille et peu cher. Il est basé sur l'Arduino, très modulaire. 
+Le Moteino est un ordinateur de très petite taille et peu cher. Il est basé sur l'Arduino, très modulaire. Les Moteino ont une puce mémoire EEPROM, un port série, une puce réseau RFM69.
 
 Le but de ce projet est de prendre en main l'architecture embarquée du Moteino : produire du code C++ à installer sur un Moteino, mais surtout comprendre comment manipuler correctement cette architecture.
 La production de code C++ demande l'utilisation d'outils particuliers. Arduino propose un IDE minimaliste qui ne convient pas aux projets industriels, nous utilisons donc platformio pour automatiser la gestion des librairies, compiler et envoyer le code sur les chipsets.
+
+
 
 \chapter{Liens utiles}
 
@@ -57,7 +59,11 @@ Pour modifier le projet il faut par contre utiliser la connexion git en ssh, par
 
 Platformio met à disposition une commande pour compiler automatiquement le code, pio.
 
+\subsubsection{Déploiement du code}
+
 Une fois le code téléchargé, il suffit de faire \verb+pio -t upload+ dans un répertoire de main pour déployer les binaires sur les chipsets.
+
+\subsubsection{Lecture du port série}
 
 \subsection{Interface graphique : Atom/Platformio}
 
@@ -74,34 +80,87 @@ Le plug-in Plaformio pour Atom permet le déploiement rapide depuis l'éditeur d
 
 Pour l'installer suivre \href{http://docs.platformio.org/en/stable/ide/atom.html#installation}{le site officiel}.
 
-Une fois installé, il faut ouvrir le projet avec \verb+file/open prject flder+ et entrer un des répertoires présents dans src/main. Pour installer ce projet il suffit de cliquer à gauche sur la flêche de légende \verb+platformio:upload+ . si l'upoad ne fonctionne pas, il faut s'assurer que le \verb+upload_port+ du fichier platformio.ini correspond bien au port USB du moteino. En cas de multiple pors USB ceux-ci peuvent varier.
+Une fois installé, il faut ouvrir le projet avec \verb+file/open project folder+ et entrer un des répertoires présents dans src/main. Pour installer ce projet il suffit de cliquer à gauche sur la flêche de légende \verb+platformio:upload+ . si l'upoad ne fonctionne pas, il faut s'assurer que le \verb+upload_port+ du fichier platformio.ini correspond bien au port USB du moteino. En cas de multiple pors USB ceux-ci peuvent varier.
 
-\chapter{Coder le Moteino}
+\chapter{Programmation du Moteino}
 
-Le moteino est mono-thread et basé sur une boucle de gestion. Un code déstiné au Moteino, ou plus généralement à un Arduino, doit avoir deux fonctions :
+Le moteino est mono-thread et basé sur une boucle de gestion. Un code destiné au Moteino, ou plus généralement à un Arduino, doit avoir deux fonctions :
 \begin{enumerate}
 \item une fonction d'initialisation des élements appelée \verb+init()+.
-\item une fonction utilisée périodiquement appelée \verb+loop+
+\item une fonction utilisée périodiquement appelée \verb+loop()+
 \end{enumerate}
+Si en c++ l'initialisation des objets peut être exécutée dans leur constructeur, dans l'arduino le code peut être chargé alors que les puces ne sont pas toutes prêtes. La fonction init() garantit une execution correcte.
 
-Chaque fichier source dédié à etre injectée dans un moteino doit donc avoir ces deux méthodes. L'utisation de librairies doit donc prendre en compte cette contrainte.
+Chaque fichier source dédié à être injecté dans un moteino doit donc avoir ces deux méthodes, et en particulier les librairies doivent être initialisées dans l'appel à l'init().
+
+Les interruptions sont gérées par le chipset intégré et donc transparentes pour l'utilisateur.
 
 \section{Principe de code}
 
-Les librairies sont des éléments de code partagées. Elles représentent généralment un élément physique du moteino, ou un protocole.
-Un fichier source peut donc utiliser des librairies, il est responsable de les initialiser durant son init() et de les appeler durant son loop().
+Les librairies sont des éléments de code qui peuvent être partagées. Elles représentent généralement un élément physique du moteino, ou un protocole.
+Un fichier source à injecter dans un moteino peut utiliser des librairies, il est responsable de les initialiser durant son init() et de les appeler durant son loop().
 
-Étant donné que le Moteino est mono-thread, il ne faut surtout pas avoir d'appel à sleep() dans le code, que ce soit dans le main ou dans les librairies. En effet un appel à sleep() bloque tout le système, les protocole réseaux auront donc des timeout. Il vaut mieux à la place enregistrer le temps de la prochaine "sortie de veille" et ne rien faire dnas les fonctions loop() tant que ce temps n'est pas atteint.
+Étant donné que le Moteino est mono-thread, il ne faut surtout pas avoir d'appel à sleep() dans le code des librairies, que ce soit dans le main ou dans les librairies. En effet un appel à sleep() bloque tout le système, les protocole réseaux auront donc des timeout. Il vaut mieux à la place enregistrer le temps de la prochaine "sortie de veille" et ne rien faire dans les fonctions loop() tant que ce temps n'est pas atteint.
+
+La création d'un binaire pour Arduino demande donc la création d'un code contenant une fonction init() et une fonction loop(), la fonction init() étant responsable d'initialiser les éléments du chipset, la fonction loop() responsable d'appeler périodiquement (ou d'utiliser) ces éléments.
 
 \section{Les librairies présentes}
 
-Deux types principaux de librairies sont présentes dans le répertoire src/lib. Les librairies de drivers codent l'accès en dur aux élements du moteino. Les librairies de gestion codent les protocoles logiciels. Dans certains cas le driver est fourni dans le meme répertoire que la librairie de gestion.
+Deux types principaux de librairies sont présentes dans le répertoire src/lib. Les librairies de drivers codent l'accès en dur aux élements du moteino. Les librairies de gestion codent les protocoles logiciels. Dans certains cas le driver est fourni dans le même répertoire que la librairie de gestion.
 
 \subsection{Moteino}
 
-\subsection{RFM69}
+Ce driver propose l'accès aux chipset généralement intégrés au Moteino.
 
-\subsection{ButtonCommand}
+Le port série est accessible pour transfert de données via/depuis un autre PC.
+
+Le Moteino spécifie la structure de ses paramètre et stocke ceux-ci dans l'EEPROM, il les charge si possible à l'initialisation. En particulier les paramètres réseau y sont stockés, ce qui permet de conserver le réseau lors du redémarrage des moteinos.
+
+Le Moteino étant équipée d'une LED, des fonctions basiques de manipulation de celle-ci sont mises à disposition : allumer/éteindre, clignoter à une fréquence donnée ou un nombre de fois spécifique.
+
+\subsection{Lib RFM69}
+
+La puce RFM69 est intégrée à la plupart des moteino. La librairie rfm69 est en dépendance dans platformio pour apporter les drivers nécessaires à l'utilisation de cette puce.
+
+La librairie RFM69Manager a pour rôle d'assurer l'utilisation de cet élément. Elle  gère la découverte et l'association à un réseau ad-hoc.
+
+\subsubsection{Puce RFM69}
+
+La puce par défaut permet de spécifier un numéro de réseau (0-255) et un identifiant propre sur ce réseau, ainsi qu'une clé de cryptage. Le réseau ad-hoc est défini par l'ensemble des éléments partageant ce couple (num, clé).
+
+Une fois le réseau spécifié, la puce peut envoyer sur ce réseau, que ce soit à un élément du réseau en spécifiant son identifiant, ou en broadcast à tous les éléments du réseau. Dans un cas comme dans l'autre, tous les éléments physiques du réseau reçoivent les paquets, mais un filtrage dans la puce ignore les paquets reçus qui ne sont pas destinés à celle-ci. Les éléments du réseau peuvent être mis en mode "promiscuous" pour accéder à tous les paquets du réseau.
+
+Un mode d'envoi "synchrone" ré envoie le même paquet plusieurs fois tant que la puce n'a pas reçu un paquet spécifique d'acquittement.
+
+À l'extinction de la puce, les données de configuration sont perdues : elles doivent donc etre stockées, dans le code ou dans la ROM, ou utiliser un protocole de découverte. La libirairie RFM69Mananger se charge de cette dernière opération.
+
+\subsubsection{Mode découverte}
+
+En mode de découverte réseau, le manager se connecte à un réseau spécifique, désactive l'encryption, se met en mode promiscuous, puis envoie régulièrement une trame de demande d'information réseau en broadcast.
+
+Une fois une réponse reçue, il traduit cette réponse en spécification réseau et se connecte à ce réseau. Cette spécification est enregistrée dans la mémoire du moteino, ausi au redémarrage le manager repassera directement en mode connexion au réseau.
+
+\subsubsection{Mode connexion au réseau}
+
+Une fois les paramètres d'un réseau connu, la puce doit s'attribuer un numéro de réseau, si celui-ci n'est pas spécifié dans le code/la mémoire. Pour cela, le manager se met en mode promiscuous puis itère sur chacune des adresses possible. Pour chaque adresse, il lui envoie un message avec acquittement. S'il ne reçoit pas de réponse, soit cette adresse est libre, soit il y a une autre puce qui tente de l'acquérir.
+
+Pour éviter les risques de collision lors de la recherche d'adresse IP, après avoir déterminé une adresse intéressante le manager attend entre 0 et 1s puis renvoie un message avec acquittement. En cas de non-réponse, il s'attribue cette adresse ; Sinon il passe à l'adresse suivante.
+
+Une fois l'identifiant sur le réseau déterminé,  le manager connecte la puce à cet identifiant et passe en mode transmission
+
+\subsubsection{Mode transmission}
+
+Dans ce mode, le manager écoute les trames sur le réseau qui lui sont destinées et est disponible pour l'envoi de trames, que ce soit en mode synchrone ou asynchrone, avec ou sans broadcast. Deux cas particulier sont traités.
+
+Dans le cas où il reçoit un message de découverte d'IP réseau, le manager renvoie un acquittement. Cela permet à un nouvel arrivant sur le réseau de savoir que cette adresse est déjà réservée.
+
+Dans le cas où un message provenant de lui même est découvert, cela signifie qu'il y a eu une collision lors de l'attribution de l'identifiant sur le réseau. Le manager repasse alors en mode connexion au réseau, sauf si ce réseau est inscrit dans les paramètres de la mémoire.
+
+\subsubsection{Mode appareillage}
+
+Ce mode permet à un Moteino de connecter des moteinos sur son réseau. Dans ce mode le manager n'a plus visibilité sur son réseau, afin de répondre aux messages des moteinos en mode découverte. Il attend donc un certain temps (par défaut 1min) , et envoie les informations de connexion au réseau aux éléments le demandant. Une fois le délai d'appareillage atteint, il repasse en mode connexion.
+
+\subsection{Lib ButtonCommand}
 
 La librairie Button écoute sur un pin la tension (0 ou 1) présente à chaque loop(). Elle enregistre les variations sous la forme d'une série de durées d'appui. Lorsqu'un relachement suffisamment long (3s) est fait, cette série est mise à disposition pour un autre module.
 
@@ -109,9 +168,29 @@ La librairie ButtonCommand quant à elle traduit les séquences d'appuis en acti
 \begin{description}
 \item[2 appuis] démarrage du mode pairing
 \item[3 appuis] extinction du mode pairing
-\item[un appui court] moins de .5s, demande aux éléments du réseau de clignoter
+\item[un appui court] moins de .5s, demande aux éléments sur le même réseau de clignoter
 \item[un appui moyen] entre .5 et 3s, tente de se connecter à un moteino en mode "pairing"
 \item[un appui long] entre 3 et 10s acquiert un réseau aléatoire et se met en mode "pairing"
+\end{description}
+
+\subsection{Lib SerialShell}
+
+Cette librairie lit à chaque loop() les données du port serial et les interprete sur le moteino :
+\begin{description}
+\item[blink A] fait clignoter la LED avec un délai de A ms
+\item[burn A] envoie régulièrement un message sur le réseau durant A ms
+\item[dbg=A] met le niveau de débugage du moteino à A (inutilisé)
+\item[flash A] fait clignoter la LED en continu avec un délai de A ms
+\item[load] recharge les paramètres du moteino depuis la mémoire
+\item[pairon] met le RFM69Manager en mode appareillage
+\item[pairoff] quitte le mode appareillage du RFM69Manager
+\item[pbp=A] modifie la période d'envoie de message sur le réseau à A ms
+\item[rdip=A] met l'adresse IP de la RFM69 à A
+\item[rdnet=A] met le réseau de le RFM69 à A
+\item[rdran] demande au Moteino de choisir un réseau aléatoire, une clé de cryptage aléatoire, puis de se connecter sur ce réseau.
+\item[rdsip] demande au manager de se connecter au réseau actuel
+\item[rdsnet] demande au manager de découvrir un réseau
+\item[write] enregistre les paramètres actuels du moteino dans la mémoire
 \end{description}
 
 \end{document}

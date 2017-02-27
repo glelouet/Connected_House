@@ -180,7 +180,6 @@ void RF69Manager::loopTransmit() {
 void RF69Manager::loopPairing() {
   if (pairingEnd <= millis()) {
     pair(false);
-    Serial.println("pairing timeout");
     m_chg = true;
   } else {
     if (radio.receiveDone()) {
