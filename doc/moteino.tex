@@ -21,8 +21,6 @@ Le Moteino est un ordinateur de très petite taille et peu cher. Il est basé su
 Le but de ce projet est de prendre en main l'architecture embarquée du Moteino : produire du code C++ à installer sur un Moteino, mais surtout comprendre comment manipuler correctement cette architecture.
 La production de code C++ demande l'utilisation d'outils particuliers. Arduino propose un IDE minimaliste qui ne convient pas aux projets industriels, nous utilisons donc platformio pour automatiser la gestion des librairies, compiler et envoyer le code sur les chipsets.
 
-
-
 \section{Liens utiles}
 
 \href{https://github.com/glelouet/Moteino}{le git du projet}
@@ -54,7 +52,7 @@ Si make est installé, un appel à make produit la documentaton.
 
 \section{Outils de développement}
 
-diffrents outils sont utlisés pour s'assurer du fonctionnement de ce projet.
+différents outils sont nécessaires pour le bon fonctionnement de ce projet.
 
 \subsection{Gestionnaire de version : git}
 
@@ -66,17 +64,21 @@ Pour télécharger le git du projet à des fins de test il suffit de faire\\
 Pour modifier le projet il faut par contre utiliser la connexion git en ssh, par exemple\\
 \verb+git@github.com:glelouet/Moteino.git+
 
+\verb+git pull+ pour mettre à jour le dépot. 
+
 \subsection{outils en ligne de commande : pio}
 
 Platformio met à disposition une commande pour compiler automatiquement le code, pio.
 
+Elle s'installe depuis pip avec \verb+pip install platformio+
+
 \subsubsection{Déploiement du code}
 
-Une fois le code téléchargé, il suffit de faire \verb+pio -t upload+ dans un répertoire de main pour déployer les binaires sur les chipsets.
+Une fois le code téléchargé, il suffit de faire \verb+pio -t upload+ dans un répertoire de src/main pour déployer les binaires sur les chipsets.
 
 \subsubsection{Lecture du port série}
 
-La commande \verb+screen /dev/ttyUSB0+ capture les données sur le port série virtuel \verb+/dev/ttyUSB0+. Elle permet aussi de transmettre des commanes auMoteino (cf librairie serialshell plus loin)\\
+La commande \verb+screen /dev/ttyUSB0+ capture les données sur le port série virtuel \verb+/dev/ttyUSB0+. Elle permet aussi de transmettre des commanes au Moteino (cf librairie serialshell plus loin)\\
 Pour terminer la session : $ctrl+A$, $shift+k$, $y$
 
 \subsection{Interface graphique : Atom/Platformio}
@@ -210,6 +212,8 @@ Cette librairie lit à chaque loop() les données du port serial et les interpre
 
 \section{À faire}
 
-Enlever tous les sleep() En effet ceux-ci peuevnt gèner le fonctionnement des modules. Cependant leur remplacement n'est pas aisé car il n'est pas possible de consever l'état actuel de la fonction dans un module.
+Enlever tous les sleep() En effet ceux-ci peuvent gèner le fonctionnement des modules. Cependant leur remplacement n'est pas aisé car il n'est pas possible de consever l'état actuel de la fonction dans un module. Il faudrait mettre la pile en mémoire et 'y revenir qu'une fois le temps demandé écoulé.
+
+Les libiraires ethernet ont été commencées mais non probantes à cause de problèmes d'accès au bus SPI.
 
 \end{document}
